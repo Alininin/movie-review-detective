@@ -1,0 +1,74 @@
+{
+  "model_path": "models\\tfidf_lr.joblib",
+  "model_bytes": 184078,
+  "model_sha256": "25530519eb1d41aedb4e9fb639d37b9ff655e85c129f9cf4692e25593143f21e",
+  "pipeline_steps": [
+    "tfidf",
+    "classifier"
+  ],
+  "vocabulary_size": 10000,
+  "feature_dimension": 10000,
+  "cases": [
+    {
+      "case": "正面明确",
+      "text": "A wonderful film with a warm, generous heart.",
+      "label": 1,
+      "label_name": "positive",
+      "scores": {
+        "negative": 0.28903,
+        "positive": 0.71097
+      }
+    },
+    {
+      "case": "负面明确",
+      "text": "A dull, joyless mess that wastes a great cast.",
+      "label": 1,
+      "label_name": "positive",
+      "scores": {
+        "negative": 0.429261,
+        "positive": 0.570739
+      }
+    },
+    {
+      "case": "否定句",
+      "text": "The movie was not good at all.",
+      "label": 0,
+      "label_name": "negative",
+      "scores": {
+        "negative": 0.586073,
+        "positive": 0.413927
+      }
+    },
+    {
+      "case": "转折句",
+      "text": "The acting was excellent, but the story was boring.",
+      "label": 1,
+      "label_name": "positive",
+      "scores": {
+        "negative": 0.409243,
+        "positive": 0.590757
+      }
+    },
+    {
+      "case": "短文本",
+      "text": "Loved it.",
+      "label": 1,
+      "label_name": "positive",
+      "scores": {
+        "negative": 0.314388,
+        "positive": 0.685612
+      }
+    },
+    {
+      "case": "长文本",
+      "text": "The cinematography was stunning and the performances were superb. The cinemat...",
+      "label": 1,
+      "label_name": "positive",
+      "scores": {
+        "negative": 0.318709,
+        "positive": 0.681291
+      }
+    }
+  ],
+  "reload_identical": true
+}

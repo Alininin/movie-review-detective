@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-11-17T18:11:04+08:00",
+  "evaluated_on": {
+    "split": "test",
+    "samples": 200,
+    "label_counts": {
+      "negative": 100,
+      "positive": 100
+    },
+    "source": "data/reviews.csv (split=test)"
+  },
+  "run_config": {
+    "cpu": {
+      "processor_identifier": "AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "platform_processor": "AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "machine": "AMD64",
+      "logical_cores": 32,
+      "python": "3.12.10",
+      "torch_device": "cpu (device=-1)"
+    },
+    "batch_size": 1,
+    "execution": "顺序执行，逐条推理",
+    "tfidf": {
+      "truncation": "无（TF-IDF 使用全文）",
+      "feature_settings": "max_features=10000, ngram_range=(1,2), min_df=2, sublinear_tf=True"
+    },
+    "distilbert": {
+      "truncation": "truncation=True, max_length=256",
+      "device": "cpu",
+      "token_count": {
+        "mean": 261.4,
+        "max": 1202,
+        "truncated_samples": 69
+      }
+    }
+  },
+  "models": {
+    "tfidf": {
+      "display_name": "TF-IDF + 逻辑回归",
+      "model_id": "sklearn Pipeline(TfidfVectorizer, LogisticRegression)",
+      "accuracy": 0.815,
+      "macro_f1": 0.814958,
+      "confusion_matrix": [
+        [
+          80,
+          20
+        ],
+        [
+          17,
+          83
+        ]
+      ],
+      "per_class": {
+        "negative": {
+          "precision": 0.824742,
+          "recall": 0.8,
+          "f1": 0.812183,
+          "support": 100
+        },
+        "positive": {
+          "precision": 0.805825,
+          "recall": 0.83,
+          "f1": 0.817734,
+          "support": 100
+        }
+      },
+      "confusion_matrix_axes": {
+        "rows": "真实标签 [negative, positive]",
+        "columns": "预测标签 [negative, positive]"
+      },
+      "timing": {
+        "model_load_seconds": 0.929,
+        "inference_total_seconds": 0.193,
+        "per_item_ms": 0.966
+      }
+    },
+    "distilbert": {
+      "display_name": "DistilBERT SST-2",
+      "model_id": "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+      "accuracy": 0.915,
+      "macro_f1": 0.914981,
+      "confusion_matrix": [
+        [
+          90,
+          10
+        ],
+        [
+          7,
+          93
+        ]
+      ],
+      "per_class": {
+        "negative": {
+          "precision": 0.927835,
+          "recall": 0.9,
+          "f1": 0.913706,
+          "support": 100
+        },
+        "positive": {
+          "precision": 0.902913,
+          "recall": 0.93,
+          "f1": 0.916256,
+          "support": 100
+        }
+      },
+      "confusion_matrix_axes": {
+        "rows": "真实标签 [negative, positive]",
+        "columns": "预测标签 [negative, positive]"
+      },
+      "timing": {
+        "model_load_seconds": 2.933,
+        "inference_total_seconds": 7.25,
+        "per_item_ms": 36.249
+      }
+    }
+  },
+  "agreement_rate": 0.81,
+  "notes": [
+    "分类分数是模型输出，不代表判断正确的概率。",
+    "模型加载时间与推理时间分开记录。",
+    "同一份测试集只用于评测，未参与任何参数选择。",
+    "截断策略：DistilBERT 只使用前 256 个 token，超出部分未参与判断。"
+  ]
+}
