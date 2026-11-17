@@ -1,0 +1,21 @@
+{
+  "name": "movie-review-detective-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "影评侦探前端：影评资料库、情感分析、相似检索、模型挑战、实验与历史",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "echarts": "^5.5.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.0.7"
+  }
+}
