@@ -1,0 +1,13 @@
+id,category,model,original,rewritten,human_label_original,human_label_rewritten,expected_change,pred_original,pred_original_score,pred_rewritten,pred_rewritten_score,prediction_changed,change_reasonable,note
+N1,否定表达,TF-IDF + 逻辑回归,The movie was good.,The movie was not good.,positive,negative,flip,positive,0.500379,negative,0.585531,True,True,情感本应翻转，模型跟随变化
+N1,否定表达,DistilBERT SST-2,The movie was good.,The movie was not good.,positive,negative,flip,positive,0.999857,negative,0.999773,True,True,情感本应翻转，模型跟随变化
+N2,否定表达,TF-IDF + 逻辑回归,I really enjoyed the film.,I really did not enjoy the film.,positive,negative,flip,positive,0.716564,positive,0.595005,False,False,情感本应翻转，模型没有变化
+N2,否定表达,DistilBERT SST-2,I really enjoyed the film.,I really did not enjoy the film.,positive,negative,flip,positive,0.999876,negative,0.999268,True,True,情感本应翻转，模型跟随变化
+T1,转折表达,TF-IDF + 逻辑回归,The movie is long but never boring.,The movie is long and often boring.,positive,negative,flip,negative,0.590277,negative,0.514153,False,False,情感本应翻转，模型没有变化
+T1,转折表达,DistilBERT SST-2,The movie is long but never boring.,The movie is long and often boring.,positive,negative,flip,positive,0.993429,negative,0.999715,True,True,情感本应翻转，模型跟随变化
+T2,转折表达,TF-IDF + 逻辑回归,"The first half is dull, but the second half is gripping.","The first half is gripping, but the second half is dull.",positive,negative,flip,negative,0.55377,negative,0.55377,False,False,情感本应翻转，模型没有变化
+T2,转折表达,DistilBERT SST-2,"The first half is dull, but the second half is gripping.","The first half is gripping, but the second half is dull.",positive,negative,flip,positive,0.997958,negative,0.999289,True,True,情感本应翻转，模型跟随变化
+P1,保持含义的改写,TF-IDF + 逻辑回归,The actors were excellent.,The performances were impressive.,positive,positive,stable,positive,0.597679,positive,0.654096,False,True,只是换说法，模型保持稳定
+P1,保持含义的改写,DistilBERT SST-2,The actors were excellent.,The performances were impressive.,positive,positive,stable,positive,0.999863,positive,0.999878,False,True,只是换说法，模型保持稳定
+P2,保持含义的改写,TF-IDF + 逻辑回归,It was a waste of two hours.,I regret spending two hours on this.,negative,negative,stable,negative,0.64886,negative,0.520524,False,True,只是换说法，模型保持稳定
+P2,保持含义的改写,DistilBERT SST-2,It was a waste of two hours.,I regret spending two hours on this.,negative,negative,stable,negative,0.999783,negative,0.99882,False,True,只是换说法，模型保持稳定

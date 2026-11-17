@@ -1,0 +1,230 @@
+{
+  "generated_at": "2026-11-17T18:07:33+08:00",
+  "judging_rule": "相关性以是否表达查询的主要观点为依据，不只看是否有相同单词；话题相关即算相关，不论情感正负",
+  "top_k": 5,
+  "queries": [
+    {
+      "query_id": "Q1",
+      "topic": "演技",
+      "relevant": 5,
+      "judged": 5,
+      "items": [
+        {
+          "rank": 1,
+          "sample_id": "pool-008346",
+          "similarity": 0.503852,
+          "relevant": true,
+          "reason": "通篇比较舞台版与影片的表演和情感效果，属于对演技的讨论"
+        },
+        {
+          "rank": 2,
+          "sample_id": "pool-014314",
+          "similarity": 0.465874,
+          "relevant": true,
+          "reason": "明确评价 Dudley Moore 的表演与 Gielgud 的角色选择"
+        },
+        {
+          "rank": 3,
+          "sample_id": "pool-005765",
+          "similarity": 0.462583,
+          "relevant": true,
+          "reason": "逐一点评 Bening、Cross、Wood 三人的表演水准"
+        },
+        {
+          "rank": 4,
+          "sample_id": "pool-010708",
+          "similarity": 0.459551,
+          "relevant": true,
+          "reason": "讨论演员阵容是否被用好，并点名 Cuba Gooding Jr. 表演糟糕"
+        },
+        {
+          "rank": 5,
+          "sample_id": "pool-021673",
+          "similarity": 0.444545,
+          "relevant": true,
+          "reason": "讨论演员只是在演自己、观众误以演技评判影片"
+        }
+      ],
+      "precision_at_5": 1.0
+    },
+    {
+      "query_id": "Q2",
+      "topic": "剧情",
+      "relevant": 2,
+      "judged": 5,
+      "items": [
+        {
+          "rank": 1,
+          "sample_id": "pool-009389",
+          "similarity": 0.497284,
+          "relevant": true,
+          "reason": "明确提到结局反转，并认为反转拙劣、可预料"
+        },
+        {
+          "rank": 2,
+          "sample_id": "pool-007978",
+          "similarity": 0.474616,
+          "relevant": false,
+          "reason": "只谈视觉风格与剧情单薄，没有涉及反转或悬念"
+        },
+        {
+          "rank": 3,
+          "sample_id": "pool-016800",
+          "similarity": 0.461981,
+          "relevant": false,
+          "reason": "讲人物关系与幽默场景，没有涉及剧情反转"
+        },
+        {
+          "rank": 4,
+          "sample_id": "pool-014554",
+          "similarity": 0.45124,
+          "relevant": true,
+          "reason": "讨论剧情走向是否在意料之中、结局是否被提前看穿"
+        },
+        {
+          "rank": 5,
+          "sample_id": "pool-015562",
+          "similarity": 0.447209,
+          "relevant": false,
+          "reason": "只称赞群像与叙事，没有涉及反转或悬念"
+        }
+      ],
+      "precision_at_5": 0.4
+    },
+    {
+      "query_id": "Q3",
+      "topic": "节奏",
+      "relevant": 3,
+      "judged": 5,
+      "items": [
+        {
+          "rank": 1,
+          "sample_id": "pool-010708",
+          "similarity": 0.543355,
+          "relevant": true,
+          "reason": "明确指出节奏错误，主角半小时后才进入状态"
+        },
+        {
+          "rank": 2,
+          "sample_id": "pool-000119",
+          "similarity": 0.542923,
+          "relevant": true,
+          "reason": "提到开演 30 分钟后开始无聊、慢镜头过多"
+        },
+        {
+          "rank": 3,
+          "sample_id": "pool-006375",
+          "similarity": 0.53724,
+          "relevant": false,
+          "reason": "主要谈表演差、角色讨厌，没有谈节奏"
+        },
+        {
+          "rank": 4,
+          "sample_id": "pool-000205",
+          "similarity": 0.526957,
+          "relevant": false,
+          "reason": "主要谈胶片与录像混用的画质问题和剧本，没有谈节奏"
+        },
+        {
+          "rank": 5,
+          "sample_id": "pool-007978",
+          "similarity": 0.519415,
+          "relevant": true,
+          "reason": "称 81 分钟是催眠，动作段落之间存在空洞与冷场"
+        }
+      ],
+      "precision_at_5": 0.6
+    },
+    {
+      "query_id": "Q4",
+      "topic": "配乐",
+      "relevant": 4,
+      "judged": 5,
+      "items": [
+        {
+          "rank": 1,
+          "sample_id": "pool-015732",
+          "similarity": 0.51388,
+          "relevant": true,
+          "reason": "直接把 stellar soundtrack 列为影片最美之处"
+        },
+        {
+          "rank": 2,
+          "sample_id": "pool-022929",
+          "similarity": 0.504693,
+          "relevant": false,
+          "reason": "通篇谈爱情与演员表现，没有提到配乐"
+        },
+        {
+          "rank": 3,
+          "sample_id": "pool-010955",
+          "similarity": 0.470953,
+          "relevant": true,
+          "reason": "批评配乐像在某人的笔记本电脑上做出来的"
+        },
+        {
+          "rank": 4,
+          "sample_id": "pool-018503",
+          "similarity": 0.468667,
+          "relevant": true,
+          "reason": "提到片中音乐虽有限但好听，插曲难忘"
+        },
+        {
+          "rank": 5,
+          "sample_id": "pool-008741",
+          "similarity": 0.459551,
+          "relevant": true,
+          "reason": "大段批评配乐被滥用、同一首歌重复播放"
+        }
+      ],
+      "precision_at_5": 0.8
+    },
+    {
+      "query_id": "Q5",
+      "topic": "台词与幽默",
+      "relevant": 4,
+      "judged": 5,
+      "items": [
+        {
+          "rank": 1,
+          "sample_id": "pool-001835",
+          "similarity": 0.510773,
+          "relevant": true,
+          "reason": "讨论台词刻意荒诞、以讽刺方式讲出并制造笑点"
+        },
+        {
+          "rank": 2,
+          "sample_id": "pool-004246",
+          "similarity": 0.496197,
+          "relevant": true,
+          "reason": "逐句比较台词与笑点，指出只有一句好笑"
+        },
+        {
+          "rank": 3,
+          "sample_id": "pool-010851",
+          "similarity": 0.4881,
+          "relevant": true,
+          "reason": "评价这部所谓喜剧并不能让人笑"
+        },
+        {
+          "rank": 4,
+          "sample_id": "pool-020923",
+          "similarity": 0.454051,
+          "relevant": true,
+          "reason": "提到片中金句多，看的时候会跟着念台词"
+        },
+        {
+          "rank": 5,
+          "sample_id": "pool-022148",
+          "similarity": 0.438216,
+          "relevant": false,
+          "reason": "只谈故事轻松有趣，没有涉及台词或笑点"
+        }
+      ],
+      "precision_at_5": 0.8
+    }
+  ],
+  "mean_precision_at_5": 0.72,
+  "total_judgements": 25,
+  "scope_note": "该结果只反映这 25 条人工判断，不代表完整检索能力。"
+}

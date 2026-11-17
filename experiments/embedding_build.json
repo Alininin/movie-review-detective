@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-11-17T18:06:32+08:00",
+  "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+  "model_load_seconds": 26.606,
+  "encode_seconds": 5.88,
+  "per_item_ms": 11.761,
+  "batch_size": 32,
+  "device": "cpu",
+  "count": 500,
+  "dimension": 384,
+  "embedding_file_bytes": 768128,
+  "token_stats": {
+    "mean": 297.4,
+    "max": 1365,
+    "truncated_count": 217,
+    "max_seq_length": 256,
+    "truncated_ratio": 0.434
+  },
+  "reload_check": "重新加载向量文件与 ID 文件，形状、数值、顺序三项一致",
+  "versions": {
+    "python": "3.12.10"
+  }
+}
