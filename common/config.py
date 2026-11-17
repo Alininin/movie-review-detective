@@ -31,6 +31,13 @@ def _load_dotenv(path: Path) -> None:
 
 _load_dotenv(ROOT / ".env")
 
+# 相对路径统一按项目根目录解析：这样从任意目录启动都指向同一处缓存与数据库，
+# .env 里也就可以写相对路径，换台机器克隆下来不用改。
+for _key in ("HF_HOME", "DATABASE_PATH"):
+    _value = os.getenv(_key, "").strip()
+    if _value and not Path(_value).is_absolute():
+        os.environ[_key] = str((ROOT / _value).resolve())
+
 # Hugging Face 端点。国内网络下 huggingface.co 不可达，必须指向镜像。
 # 必须在 import datasets / transformers 之前写入环境变量，因此放在模块顶部。
 HF_ENDPOINT = os.getenv("HF_ENDPOINT", "").strip()
