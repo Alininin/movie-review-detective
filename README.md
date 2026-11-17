@@ -1,0 +1,365 @@
+# 影评侦探 · 情感分析与相似影评检索
+
+> 自然语言处理与应用 · 课程设计
+> 一个本地运行的中文网页系统：用两个模型判断英文影评的情感、用向量检索相似影评，并把实验指标、错误案例与操作历史都放进网页里。
+
+![影评资料库](docs/images/library.png)
+
+---
+
+## 目录
+
+- [项目做了什么](#项目做了什么)
+- [五个页面](#五个页面)
+- [环境要求](#环境要求)
+- [快速开始（三步）](#快速开始三步)
+- [首次运行的离线资源准备](#首次运行的离线资源准备)
+- [目录结构](#目录结构)
+- [接口清单](#接口清单)
+- [环境变量与离线运行](#环境变量与离线运行)
+- [实验材料在哪](#实验材料在哪)
+- [评分点与文件对照](#评分点与文件对照)
+- [常见问题](#常见问题)
+- [依赖版本](#依赖版本)
+
+---
+
+## 项目做了什么
+
+三件事，都跑在本机 CPU 上：
+
+1. **情感分析**：同一段英文影评，同时交给
+   - 自己训练的 `TF-IDF + 逻辑回归`（Sklearn，1000 条训练集）
+   - 现成的 `distilbert-base-uncased-finetuned-sst-2-english`（只推理，不微调）
+
+   返回两个模型各自的标签、**分类分数**和耗时，并把结果写进 SQLite 历史。
+
+2. **相似影评检索**：用 `all-MiniLM-L6-v2` 把查询编码成 384 维向量，
+   与检索库中 500 条影评的**预生成**向量算余弦相似度，返回 Top-5。
+
+3. **模型挑战**：6 对英文句子（否定 2 对、转折 2 对、同义改写 2 对），
+   看两个模型在「情感应当翻转」和「只是换说法」两种情形下是否给出了合理的预测。
+
+> **两个数值口径，请注意区分**：
+> - `score` 是模型输出的**分类分数**，不能解释为「判断正确的概率」；
+> - `similarity` 是**余弦相似度**，不是准确率，也不代表影评观点一致。
+
+## 五个页面
+
+| 页面 | 内容 |
+|---|---|
+| 影评资料库 | 样本统计、长度分布图、分页浏览、按正负标签筛选、关键词搜索 |
+| 情感分析 | 单条双模型分析（标签 / 分数 / 耗时 / 截断提示）、CSV 批量分析与结果下载 |
+| 相似影评搜索 | 输入查询、5 条预设查询、Top-5 结果、相似度、数据集原始标签、完整原文 |
+| 模型挑战 | 6 对预置样本、现场输入句子对、两个模型并排对比与合理性判断 |
+| 实验与历史 | 指标比较表、混淆矩阵、Precision@5、错误案例分析、SQLite 历史查看与删除 |
+
+<table>
+<tr>
+<td><img src="docs/images/analyze.png" alt="情感分析" /></td>
+<td><img src="docs/images/search.png" alt="相似影评搜索" /></td>
+</tr>
+<tr>
+<td><img src="docs/images/challenge.png" alt="模型挑战" /></td>
+<td><img src="docs/images/lab.png" alt="实验与历史" /></td>
+</tr>
+</table>
+
+---
+
+## 环境要求
+
+| 项目 | 要求 | 说明 |
+|---|---|---|
+| 操作系统 | Windows / macOS / Linux | 本项目在 Windows 11 + Python 3.12 上开发验证 |
+| Python | 3.11 ~ 3.12 | 3.12.10 实测通过（`requirements.txt` 锁定了实测版本，numpy 2.5.5 需要 Python 3.11 以上） |
+| Node.js | 18 以上 | **仅修改前端时需要**；仓库内已带构建好的 `frontend/dist`，只看效果可以不装 |
+| 磁盘 | 约 3 GB | 依赖约 1.2 GB，模型缓存约 0.5 GB，数据集约 0.1 GB |
+| 显存 | 不需要 | 全部 CPU 推理 |
+| 网络 | 首次运行需要 | 下载 IMDB 数据集与三个模型权重；之后可离线 |
+
+## 快速开始（三步）
+
+```bash
+# 1. 创建虚拟环境并安装依赖（Windows 用 .venv\Scripts\python）
+git clone <你的仓库地址> movie-review-detective
+cd movie-review-detective
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt        # Windows
+# source .venv/bin/activate && pip install -r requirements.txt # macOS / Linux
+
+# 2. 复制环境配置（Windows 网络下默认走 hf-mirror 镜像）
+copy .env.example .env                                          # Windows
+# cp .env.example .env                                          # macOS / Linux
+
+# 3. 启动（一条命令同时提供接口和网页）
+.venv/Scripts/python -m backend.main
+```
+
+打开 **http://127.0.0.1:8000** 就是完整网站；
+接口文档在 **http://127.0.0.1:8000/docs**。
+
+启动时会加载模型，第一次约需 15~20 秒（含下载权重），之后约 5~10 秒。
+控制台会打印每个组件的加载结果：
+
+```
+[ready] dataset      0.00s  1200 条影评
+[ready] tfidf        1.03s  tfidf_lr.joblib
+[ready] distilbert   2.96s  distilbert/distilbert-base-uncased-finetuned-sst-2-english
+[ready] embedder     9.35s  500×384 向量已加载
+```
+
+> 若仓库里没有 `data/`、`models/` 的产物（例如只克隆了代码），先按下一节跑一遍离线脚本。
+
+## 首次运行的离线资源准备
+
+**执行顺序不能颠倒**（后一步依赖前一步的产物）：
+
+| 顺序 | 命令 | 产出 | 耗时 |
+|---|---|---|---|
+| 1 | `python scripts/01_build_dataset.py` | `data/reviews.csv`、`retrieval_pool.csv`、`sampling_manifest.json`、`cleaning_report.json`、`stats.json` | 首次约 1~3 分钟（下载 IMDB） |
+| 2 | `python scripts/02_train_tfidf.py` | `models/tfidf_lr.joblib`、`tfidf_meta.json` | 约 1 秒 |
+| 3 | `python scripts/03_verify_reload.py` | `experiments/reload_check.json` | 约 2 秒 |
+| 4 | `python scripts/04_evaluate.py` | `experiments/metrics.json`、`predictions_test.csv`、`confusion_matrix.png`、`error_cases_auto.md` | 首次约 1~2 分钟（下载 DistilBERT），之后约 10 秒 |
+| 5 | `python scripts/05_build_embeddings.py` | `data/embeddings.npy`、`embeddings_ids.json`、`experiments/embedding_build.json` | 首次约 1 分钟（下载 MiniLM） |
+| 6 | `python scripts/06_retrieval_check.py --emit` | `experiments/retrieval_results.csv`、`retrieval_check.csv`（待人工标注）、`retrieval_top5.md` | 约 5 秒 |
+| 7 | 人工填写 `experiments/retrieval_check.csv` 的 `relevant` 与 `reason` 两列（25 行） | — | — |
+| 8 | `python scripts/06_retrieval_check.py --score` | `experiments/retrieval_metrics.json` | 1 秒 |
+
+> 仓库里已经包含第 1~8 步的**全部产物**，以及人工标注完成的 `retrieval_check.csv`，
+> 因此正常验收时**不需要重跑**，直接第 3 步启动即可。重跑脚本会得到一致的划分与指标
+> （固定随机种子 `42`）。
+
+## 目录结构
+
+```
+movie-review-detective/
+├─ backend/                  后端（FastAPI）
+│  ├─ main.py                应用入口：启动加载、路由注册、静态前端托管
+│  ├─ artifacts.py           模型与数据产物的单例加载（启动一次，请求复用）
+│  ├─ db.py                  SQLite 历史记录
+│  ├─ schemas.py             请求模型与输入校验
+│  └─ routes/
+│     ├─ dataset.py          资料库统计与分页
+│     ├─ predict.py          单条 / CSV 批量预测
+│     ├─ search.py           相似影评检索
+│     ├─ challenge.py        句子对比较
+│     └─ experiments.py      实验指标与历史
+├─ common/
+│  ├─ config.py              路径、随机种子、配额、模型标识（全项目统一口径）
+│  └─ text_clean.py          清洗与长度统计（数据集构建与接口共用）
+├─ scripts/                  离线算法脚本（按编号顺序执行）
+│  ├─ 01_build_dataset.py    数据获取、抽样、清洗、统计
+│  ├─ 02_train_tfidf.py      TF-IDF + 逻辑回归训练
+│  ├─ 03_verify_reload.py    传统模型重新加载验证
+│  ├─ 04_evaluate.py         两模型统一评测
+│  ├─ 05_build_embeddings.py 检索向量构建
+│  └─ 06_retrieval_check.py  检索效果人工检查与 Precision@5
+├─ frontend/                 前端（Vue 3 + Vite + ECharts）
+│  ├─ src/views/             五个页面
+│  ├─ src/api.js             统一的接口调用封装
+│  └─ dist/                  构建产物（已提交，后端直接托管）
+├─ data/                     数据与统计产物（含向量文件）
+├─ models/                   传统模型文件
+├─ experiments/              评测与实验材料
+├─ docs/                     需求解析、页面截图
+├─ report/                   课程报告
+├─ requirements.txt
+├─ .env.example
+└─ README.md
+```
+
+### 修改前端时
+
+```bash
+cd frontend
+npm install --registry=https://registry.npmmirror.com   # 国内建议加镜像
+npm run dev      # 开发模式，http://127.0.0.1:5173，/api 自动代理到 8000
+npm run build    # 重新生成 dist，后端会自动托管新文件
+```
+
+## 接口清单
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/health` | 各组件就绪状态、版本、限制（未就绪返回 503） |
+| GET | `/api/dataset/stats` | 数据集统计（直接读 `data/stats.json`） |
+| GET | `/api/reviews` | 分页浏览，支持 `split`、`label`、`keyword` |
+| POST | `/api/predict` | 单条影评，两个模型同时分析，写入历史 |
+| POST | `/api/batch` | CSV 批量（multipart，字段 `text`，1~20 条） |
+| POST | `/api/search` | 相似影评 Top-5 |
+| GET | `/api/search/queries` | 5 条预设查询 |
+| GET | `/api/challenge/presets` | 6 对预置样本 |
+| POST | `/api/challenge` | 比较一对句子在两个模型下的输出 |
+| GET | `/api/experiments` | 指标、混淆矩阵、错误案例、检索检查 |
+| GET | `/api/experiments/confusion-matrix.png` | 混淆矩阵图 |
+| GET | `/api/history` | 历史列表（`limit`、`offset`） |
+| DELETE | `/api/history/{id}` | 删除一条历史 |
+| DELETE | `/api/history` | 清空历史 |
+
+**输入的异常提示**（都会返回中文说明，不会被静默吞掉）：
+
+| 情况 | 返回 |
+|---|---|
+| 空输入 / 只有 HTML 标签 | 400 `影评文本为空，请填写英文影评后再试` |
+| 超过 5000 字符 | 400 `影评文本超过 5000 字符上限（当前 N 个字符）…` |
+| CSV 缺少 `text` 列 | 400 `CSV 缺少 text 列。当前表头：…` |
+| CSV 为空 | 400 `CSV 文件为空，请上传包含 text 列的文件` |
+| CSV 超过 20 条 | 400 `一次最多 20 条，当前有效行 N 条…` |
+| 模型未就绪 | 503 + 具体缺哪个组件 |
+
+## 环境变量与离线运行
+
+配置文件 `.env`（从 `.env.example` 复制）：
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `HF_ENDPOINT` | `https://hf-mirror.com` | Hugging Face 端点。国内直连官方站会超时，必须用镜像；能直连时可留空 |
+| `HF_HOME` | `.cache/huggingface` | 模型与数据集缓存目录 |
+| `HOST` / `PORT` | `127.0.0.1` / `8000` | 服务地址 |
+| `DATABASE_PATH` | `data/history.db` | SQLite 文件位置 |
+| `RETRIEVAL_POOL_SOURCE` | `split_excluded` | 检索库取样口径，见下 |
+
+### 三种使用 Hugging Face 的方式
+
+1. **镜像（默认，推荐国内使用）**
+   ```ini
+   HF_ENDPOINT=https://hf-mirror.com
+   ```
+2. **官方直连**（校园网 / 有代理）
+   ```ini
+   HF_ENDPOINT=
+   ```
+3. **完全离线**：在一台能联网的机器上下载好，把整个缓存目录拷过来，然后把路径指过去
+   ```ini
+   HF_ENDPOINT=
+   HF_HOME=D:/path/to/copied/huggingface
+   ```
+   代码里只用到三个标识，缓存目录结构按 `huggingface_hub` 默认即可：
+
+   | 用途 | 标识 |
+   |---|---|
+   | 数据集 | `stanfordnlp/imdb` |
+   | 情感模型 | `distilbert/distilbert-base-uncased-finetuned-sst-2-english` |
+   | 向量模型 | `sentence-transformers/all-MiniLM-L6-v2` |
+
+   离线时 Hugging Face 会读取缓存，不会发起下载；三个模型都已加载成功后 `/api/health` 返回 200。
+
+### 检索库的取样口径
+
+任务书 5.1.1 要求「从训练集中固定选取 500 条作为检索库」。本项目默认使用
+`split_excluded`：从 IMDB train 中**排除**已抽作训练/测试的 1200 条之后再取 500 条，
+这样检索库与训练集、测试集完全不重叠，避免「检索返回的就是训练样本」的质疑。
+若要求从 1000 条训练样本里取，用：
+
+```bash
+python scripts/01_build_dataset.py --pool-source from_train_1000
+```
+
+改完需要重新执行第 1、5 步。
+
+## 实验材料在哪
+
+| 材料 | 文件 |
+|---|---|
+| 200 条测试样本逐条预测 | `experiments/predictions_test.csv` |
+| 指标、混淆矩阵数值、耗时、运行环境 | `experiments/metrics.json` |
+| 混淆矩阵图 | `experiments/confusion_matrix.png` |
+| 错误案例分析（7 条，人工撰写） | `experiments/error_cases.md` |
+| 错误与分歧样本清单（自动生成） | `experiments/error_cases_auto.md` |
+| 5 条查询 × Top-5 人工判断（25 条） | `experiments/retrieval_check.csv` |
+| Precision@5 计算结果 | `experiments/retrieval_metrics.json` |
+| 检索 Top-5 完整原文 | `experiments/retrieval_top5.md` |
+| 传统模型重载验证 | `experiments/reload_check.json` |
+| 向量构建记录 | `experiments/embedding_build.json` |
+| 6 对挑战样本 | `data/challenge_pairs.json` |
+| 抽样清单与清洗记录 | `data/sampling_manifest.json`、`data/cleaning_report.json`、`data/sampling_list.csv` |
+| 课程报告 | `report/课程报告.docx`、`report/课程报告.md` |
+| AI 使用说明 | `AI_USAGE.md` |
+
+**本次实测结果**（200 条测试集，CPU，批大小 1）：
+
+| 模型 | Accuracy | Macro-F1 | 加载耗时 | 推理总耗时 | 每条耗时 |
+|---|---|---|---|---|---|
+| TF-IDF + 逻辑回归 | 0.8150 | 0.8150 | 0.93 s | 0.19 s | 0.97 ms |
+| DistilBERT SST-2 | 0.9150 | 0.9150 | 2.93 s | 7.25 s | 36.25 ms |
+
+两模型一致率 0.8100；都判错 8 条，意见不一致 38 条；测试集 69 条（34.5%）超过 256 token 被截断。
+检索平均 Precision@5 = 0.7200。
+
+## 评分点与文件对照
+
+| 编号 | 指标点 | 分值 | 对应文件 / 页面 |
+|---|---|---|---|
+| A1 | HF 数据加载与抽样清单 | 5 | `scripts/01_build_dataset.py`、`data/sampling_manifest.json` |
+| A2 | 清洗、固定划分及重叠检查 | 5 | `common/text_clean.py`、`data/cleaning_report.json` |
+| A3 | 数据统计正确 | 2 | `data/stats.json`（页面同源） |
+| B1 | TF-IDF + LR 训练 | 7 | `scripts/02_train_tfidf.py`、`models/tfidf_lr.joblib` |
+| B2 | 传统模型重载与预测 | 4 | `scripts/03_verify_reload.py`、`experiments/reload_check.json` |
+| B3 | HF 情感模型推理正确 | 7 | `backend/artifacts.py`（`HFSentiment`） |
+| B4 | 截断策略与模型重复使用 | 4 | 启动单例加载 + `max_length=256`，`/api/health` 可见加载耗时 |
+| C1 | 两模型 Accuracy / Macro-F1 | 5 | `scripts/04_evaluate.py`、`experiments/metrics.json`、`predictions_test.csv` |
+| C2 | 混淆矩阵及耗时比较 | 3 | `experiments/confusion_matrix.png`、`metrics.json` 中 `run_config` |
+| C3 | ≥5 条案例分析 | 4 | `experiments/error_cases.md`（7 条） |
+| D1 | 500 条向量生成、保存、加载 | 5 | `scripts/05_build_embeddings.py`、`data/embeddings.npy`、`embeddings_ids.json` |
+| D2 | 余弦排序与 Top-5 | 7 | `backend/artifacts.py` 的 `search()`、`POST /api/search` |
+| D3 | 5 条查询检查及 Precision@5 | 5 | `experiments/retrieval_check.csv`、`retrieval_metrics.json` |
+| E1 | 资料库统计、分页、筛选 | 4 | 影评资料库页 |
+| E2 | 双模型分析、分数及耗时 | 5 | 情感分析页 |
+| E3 | 检索结果、相似度及原文 | 4 | 相似影评搜索页 |
+| E4 | 挑战页面及 6 对样本 | 5 | 模型挑战页、`data/challenge_pairs.json` |
+| E5 | 实验展示及历史增删查 | 5 | 实验与历史页、`backend/db.py` |
+| E6 | CSV 批量分析及下载 | 4 | 情感分析页（示例文件 `data/sample_batch.csv`） |
+| F1 | 前后端联调及启动说明 | 7 | 本文档 + `python -m backend.main` 一条命令 |
+| F2 | 依赖、脚本、报告、AI 说明 | 3 | `requirements.txt`、`frontend/package.json`、`report/`、`AI_USAGE.md` |
+
+## 常见问题
+
+**Q：启动报 `OSError: [WinError 10061]` 或 Hugging Face 连接超时？**
+A：国内直连 `huggingface.co` 会超时。确认 `.env` 里 `HF_ENDPOINT=https://hf-mirror.com`。
+若使用系统代理，Hugging Face 会读取 `HTTP_PROXY`/`HTTPS_PROXY`，注意代理与镜像不要互相干扰。
+
+**Q：`pip install` 很慢？**
+A：换国内镜像，例如
+`python -m pip install -r requirements.txt -i https://mirrors.ustc.edu.cn/pypi/simple/`
+（实测该源约 9 MB/s，阿里云源有时会被限速到几十 KB/s。）
+
+**Q：端口 8000 被占用？**
+A：改 `.env` 里的 `PORT`，或 `set PORT=8010` 后再启动。
+
+**Q：页面能打开但提示「模型未就绪」？**
+A：看控制台里哪个组件是 `[failed]`，以及 `/api/health` 返回的 `error` 字段。
+最常见原因是没跑 `scripts/02_train_tfidf.py`（缺模型文件）或没跑
+`scripts/05_build_embeddings.py`（缺向量文件）。
+
+**Q：为什么 TF-IDF 在明显的负面短句上会判错？**
+A：训练集只有 1000 条，`max_features=10000` 让模型很容易过拟合（训练集准确率 0.98，测试集 0.815），
+而且 `min_df=2` 会把出现次数少的词（如 `joyless`、`wastes`）直接丢掉。详见
+`experiments/error_cases.md` 与报告中的「局限」一节。
+
+**Q：`data/history.db` 要不要提交？**
+A：不需要，已加入 `.gitignore`。它是运行期数据库，首次调用 `/api/predict` 会自动创建。
+
+## 依赖版本
+
+实测环境（详细版本记录见 `experiments/metrics.json` 的 `versions` 与 `models/*_meta.json`）：
+
+| 组件 | 版本 |
+|---|---|
+| Python | 3.12.10 |
+| torch | 2.15.0（CPU） |
+| transformers | 4.57.6 |
+| datasets | 3.6.0 |
+| sentence-transformers | 5.7.0 |
+| scikit-learn | 1.9.1 |
+| numpy | 2.5.5 |
+| fastapi | 0.163.1 |
+| uvicorn | 0.54.0 |
+| Vue | 3.5 |
+| Vite | 6.4 |
+
+## 说明
+
+- 本项目为个人独立完成的课程设计，数据和模型均来自 Hugging Face 公开资源，
+  页面上所有数字都由后端实时计算或由离线脚本生成，没有任何预写结果。
+- AI 辅助的使用范围、采纳与修改情况、验证方式见 [AI_USAGE.md](AI_USAGE.md)。
