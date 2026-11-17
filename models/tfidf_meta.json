@@ -1,0 +1,35 @@
+{
+  "trained_at": "2026-11-17T18:04:23+08:00",
+  "artifact": "models\\tfidf_lr.joblib",
+  "artifact_bytes": 184078,
+  "training_samples": 1000,
+  "label_counts": {
+    "negative": 500,
+    "positive": 500
+  },
+  "tfidf_params": {
+    "max_features": 10000,
+    "ngram_range": [
+      1,
+      2
+    ],
+    "min_df": 2,
+    "sublinear_tf": true
+  },
+  "logreg_params": {
+    "max_iter": 1000,
+    "random_state": 42,
+    "solver": "lbfgs",
+    "C": 1.0
+  },
+  "vocabulary_size": 10000,
+  "feature_dimension": 10000,
+  "train_seconds": 0.36,
+  "train_accuracy": 0.98,
+  "data_leakage_note": "TfidfVectorizer 仅在 1000 条训练样本上 fit；测试集只做 transform",
+  "versions": {
+    "python": "3.12.10",
+    "scikit-learn": "1.9.1",
+    "joblib": "1.6.0"
+  }
+}
