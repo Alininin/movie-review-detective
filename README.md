@@ -1,5 +1,12 @@
 # 影评侦探 · 情感分析与相似影评检索
 
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.15%20CPU-EE4C2C?logo=pytorch&logoColor=white)
+![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E?logo=huggingface&logoColor=black)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.163-009688?logo=fastapi&logoColor=white)
+![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 > 自然语言处理与应用 · 课程设计
 > 一个本地运行的中文网页系统：用两个模型判断英文影评的情感、用向量检索相似影评，并把实验指标、错误案例与操作历史都放进网页里。
 
@@ -13,6 +20,7 @@
 - [五个页面](#五个页面)
 - [环境要求](#环境要求)
 - [快速开始（三步）](#快速开始三步)
+- [两条自检命令](#两条自检命令)
 - [首次运行的离线资源准备](#首次运行的离线资源准备)
 - [目录结构](#目录结构)
 - [接口清单](#接口清单)
@@ -21,6 +29,7 @@
 - [评分点与文件对照](#评分点与文件对照)
 - [常见问题](#常见问题)
 - [依赖版本](#依赖版本)
+- [License](#license)
 
 ---
 
@@ -111,6 +120,26 @@ copy .env.example .env                                          # Windows
 
 > 若仓库里没有 `data/`、`models/` 的产物（例如只克隆了代码），先按下一节跑一遍离线脚本。
 
+## 两条自检命令
+
+仓库里带了两个自检脚本，用来证明「网页上的数字、材料里的数字都不是手写的」。验收或答辩前跑一遍，比截图更有说服力。
+
+```bash
+# 1) 材料一致性：不启动后端，核对 CSV / JSON / 向量 / 指标能不能互相算得出来
+.venv/Scripts/python scripts/09_verify_materials.py
+
+# 2) 端到端：先在另一个终端启动服务，再跑这个，逐项验证接口、异常提示、历史增删
+.venv/Scripts/python -m backend.main
+.venv/Scripts/python scripts/08_smoke_test.py
+```
+
+| 脚本 | 检查什么 | 预期输出 |
+|---|---|---|
+| `09_verify_materials.py` | 抽样清单与原始行号、训练/测试无重叠、检索库与向量 ID 一一对应、逐条预测与测试集 ID 对齐、Accuracy / Macro-F1 / 混淆矩阵 / 一致率 / Precision@5 全部重新计算、案例引用的样本 ID 都出自测试集 | `材料一致性自检全部通过：47/47 项` |
+| `08_smoke_test.py` | 四个组件就绪、统计与分页筛选、双模型单条分析、空输入/超长/缺列/超 20 条的提示、CSV 批量、Top-5 排序、6 对挑战样本、指标可读取、历史增删、重启后仍在、前端与 `/docs` 可访问 | `自检全部通过：58/58 项` |
+
+两个脚本都会在结束时自动清理自己写入的历史记录，不会污染你的历史列表；退出码 0 表示全通过。
+
 ## 首次运行的离线资源准备
 
 **执行顺序不能颠倒**（后一步依赖前一步的产物）：
@@ -123,10 +152,12 @@ copy .env.example .env                                          # Windows
 | 4 | `python scripts/04_evaluate.py` | `experiments/metrics.json`、`predictions_test.csv`、`confusion_matrix.png`、`error_cases_auto.md` | 首次约 1~2 分钟（下载 DistilBERT），之后约 10 秒 |
 | 5 | `python scripts/05_build_embeddings.py` | `data/embeddings.npy`、`embeddings_ids.json`、`experiments/embedding_build.json` | 首次约 1 分钟（下载 MiniLM） |
 | 6 | `python scripts/06_retrieval_check.py --emit` | `experiments/retrieval_results.csv`、`retrieval_check.csv`（待人工标注）、`retrieval_top5.md` | 约 5 秒 |
-| 7 | 人工填写 `experiments/retrieval_check.csv` 的 `relevant` 与 `reason` 两列（25 行） | — | — |
-| 8 | `python scripts/06_retrieval_check.py --score` | `experiments/retrieval_metrics.json` | 1 秒 |
+| 7 | `python scripts/07_challenge_report.py` | `experiments/challenge_results.csv`、`challenge_results.md`（6 对句子在两个模型下的输出与合理性判断） | 约 5 秒 |
+| 8 | 人工填写 `experiments/retrieval_check.csv` 的 `relevant` 与 `reason` 两列（25 行） | — | — |
+| 9 | `python scripts/06_retrieval_check.py --score` | `experiments/retrieval_metrics.json` | 1 秒 |
+| 10 | `python report/build_report.py`（需要 `python-docx`） | `report/课程报告.docx`、`report/课程报告.md` | 约 3 秒 |
 
-> 仓库里已经包含第 1~8 步的**全部产物**，以及人工标注完成的 `retrieval_check.csv`，
+> 仓库里已经包含第 1~9 步的**全部产物**，以及人工标注完成的 `retrieval_check.csv`，
 > 因此正常验收时**不需要重跑**，直接第 3 步启动即可。重跑脚本会得到一致的划分与指标
 > （固定随机种子 `42`）。
 
@@ -154,7 +185,10 @@ movie-review-detective/
 │  ├─ 03_verify_reload.py    传统模型重新加载验证
 │  ├─ 04_evaluate.py         两模型统一评测
 │  ├─ 05_build_embeddings.py 检索向量构建
-│  └─ 06_retrieval_check.py  检索效果人工检查与 Precision@5
+│  ├─ 06_retrieval_check.py  检索效果人工检查与 Precision@5
+│  ├─ 07_challenge_report.py 6 对挑战样本的批量分析
+│  ├─ 08_smoke_test.py       端到端自检（需要后端已启动）
+│  └─ 09_verify_materials.py 材料一致性自检（不需要后端）
 ├─ frontend/                 前端（Vue 3 + Vite + ECharts）
 │  ├─ src/views/             五个页面
 │  ├─ src/api.js             统一的接口调用封装
@@ -163,9 +197,12 @@ movie-review-detective/
 ├─ models/                   传统模型文件
 ├─ experiments/              评测与实验材料
 ├─ docs/                     需求解析、页面截图
-├─ report/                   课程报告
+├─ report/                   课程报告（docx + md，build_report.py 生成）
 ├─ requirements.txt
 ├─ .env.example
+├─ .gitattributes            统一换行符；数据文件按字节保存，保证跨机器可复现
+├─ AI_USAGE.md               AI 辅助的范围、采纳与验证方式
+├─ LICENSE                   MIT
 └─ README.md
 ```
 
@@ -272,10 +309,11 @@ python scripts/01_build_dataset.py --pool-source from_train_1000
 | 检索 Top-5 完整原文 | `experiments/retrieval_top5.md` |
 | 传统模型重载验证 | `experiments/reload_check.json` |
 | 向量构建记录 | `experiments/embedding_build.json` |
-| 6 对挑战样本 | `data/challenge_pairs.json` |
+| 6 对挑战样本（原句/改写/人工判断/两个模型输出） | `data/challenge_pairs.json`、`experiments/challenge_results.csv`、`experiments/challenge_results.md` |
 | 抽样清单与清洗记录 | `data/sampling_manifest.json`、`data/cleaning_report.json`、`data/sampling_list.csv` |
 | 课程报告 | `report/课程报告.docx`、`report/课程报告.md` |
 | AI 使用说明 | `AI_USAGE.md` |
+| 自检结果 | 运行 `scripts/09_verify_materials.py` 与 `scripts/08_smoke_test.py` 得到 |
 
 **本次实测结果**（200 条测试集，CPU，批大小 1）：
 
@@ -310,8 +348,8 @@ python scripts/01_build_dataset.py --pool-source from_train_1000
 | E4 | 挑战页面及 6 对样本 | 5 | 模型挑战页、`data/challenge_pairs.json` |
 | E5 | 实验展示及历史增删查 | 5 | 实验与历史页、`backend/db.py` |
 | E6 | CSV 批量分析及下载 | 4 | 情感分析页（示例文件 `data/sample_batch.csv`） |
-| F1 | 前后端联调及启动说明 | 7 | 本文档 + `python -m backend.main` 一条命令 |
-| F2 | 依赖、脚本、报告、AI 说明 | 3 | `requirements.txt`、`frontend/package.json`、`report/`、`AI_USAGE.md` |
+| F1 | 前后端联调及启动说明 | 7 | 本文档 + `python -m backend.main` 一条命令 + `scripts/08_smoke_test.py` 58 项自检 |
+| F2 | 依赖、脚本、报告、AI 说明 | 3 | `requirements.txt`、`frontend/package.json`、`report/`、`AI_USAGE.md`、`scripts/09_verify_materials.py` |
 
 ## 常见问题
 
@@ -340,6 +378,15 @@ A：训练集只有 1000 条，`max_features=10000` 让模型很容易过拟合�
 **Q：`data/history.db` 要不要提交？**
 A：不需要，已加入 `.gitignore`。它是运行期数据库，首次调用 `/api/predict` 会自动创建。
 
+**Q：课程报告怎么重新生成？**
+A：`.venv/Scripts/python report/build_report.py`（依赖 `python-docx`）。脚本会读 `experiments/metrics.json`
+与 `data/stats.json` 里的真实数字，同时更新 `report/课程报告.docx` 和 `report/课程报告.md`，
+正文控制在 8 页以内。改过指标后重跑它，报告里的数字就会跟着更新，不会出现「报告与材料对不上」。
+
+**Q：自检脚本报连不上服务？**
+A：`scripts/08_smoke_test.py` 默认连 `http://127.0.0.1:8000`。改过端口时用
+`.venv/Scripts/python scripts/08_smoke_test.py --base-url http://127.0.0.1:8010`。
+
 ## 依赖版本
 
 实测环境（详细版本记录见 `experiments/metrics.json` 的 `versions` 与 `models/*_meta.json`）：
@@ -355,6 +402,7 @@ A：不需要，已加入 `.gitignore`。它是运行期数据库，首次调用
 | numpy | 2.5.5 |
 | fastapi | 0.163.1 |
 | uvicorn | 0.54.0 |
+| python-docx | 1.2.0（只用于重新生成课程报告） |
 | Vue | 3.5 |
 | Vite | 6.4 |
 
@@ -363,3 +411,10 @@ A：不需要，已加入 `.gitignore`。它是运行期数据库，首次调用
 - 本项目为个人独立完成的课程设计，数据和模型均来自 Hugging Face 公开资源，
   页面上所有数字都由后端实时计算或由离线脚本生成，没有任何预写结果。
 - AI 辅助的使用范围、采纳与修改情况、验证方式见 [AI_USAGE.md](AI_USAGE.md)。
+
+## License
+
+[MIT](LICENSE) © 2026 杨薇琳
+
+数据集（`stanfordnlp/imdb`）与两个预训练模型（`distilbert-base-uncased-finetuned-sst-2-english`、
+`all-MiniLM-L6-v2`）的版权与使用条款归各自发布方所有，本项目只按官方说明下载并推理，不再分发权重文件。
