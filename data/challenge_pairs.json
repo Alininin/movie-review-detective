@@ -1,0 +1,78 @@
+{
+  "doc": "模型挑战样本：6 对英文句子，否定 2 对、转折 2 对、保持含义的改写 2 对。human_label_* 为人工情感判断，expected_change 表示改写后情感是否应当翻转。",
+  "note": "expected_change=flip 表示改写句情感应当翻转；expected_change=stable 表示改写句只是换说法，情感应当保持。不能把所有预测变化都判为模型出错。",
+  "pairs": [
+    {
+      "id": "N1",
+      "category": "negation",
+      "category_cn": "否定表达",
+      "original": "The movie was good.",
+      "rewritten": "The movie was not good.",
+      "human_label_original": "positive",
+      "human_label_rewritten": "negative",
+      "human_note": "只增加否定词 not，整体情感由正面转为负面。",
+      "expected_change": "flip",
+      "focus": "模型是否跟随否定词翻转预测"
+    },
+    {
+      "id": "N2",
+      "category": "negation",
+      "category_cn": "否定表达",
+      "original": "I really enjoyed the film.",
+      "rewritten": "I really did not enjoy the film.",
+      "human_label_original": "positive",
+      "human_label_rewritten": "negative",
+      "human_note": "did not 构成否定，情感翻转；程度副词 really 不变。",
+      "expected_change": "flip",
+      "focus": "长距离否定词 did not 是否被正确处理"
+    },
+    {
+      "id": "T1",
+      "category": "contrast",
+      "category_cn": "转折表达",
+      "original": "The movie is long but never boring.",
+      "rewritten": "The movie is long and often boring.",
+      "human_label_original": "positive",
+      "human_label_rewritten": "negative",
+      "human_note": "but never boring 是正面让步；改成 and often boring 后评价转负。",
+      "expected_change": "flip",
+      "focus": "but 引导的让步结构与并列结构的区别"
+    },
+    {
+      "id": "T2",
+      "category": "contrast",
+      "category_cn": "转折表达",
+      "original": "The first half is dull, but the second half is gripping.",
+      "rewritten": "The first half is gripping, but the second half is dull.",
+      "human_label_original": "positive",
+      "human_label_rewritten": "negative",
+      "human_note": "转折句的重点通常在后半句，两句对调后整体评价反转。",
+      "expected_change": "flip",
+      "focus": "转折句中后半句的权重"
+    },
+    {
+      "id": "P1",
+      "category": "paraphrase",
+      "category_cn": "保持含义的改写",
+      "original": "The actors were excellent.",
+      "rewritten": "The performances were impressive.",
+      "human_label_original": "positive",
+      "human_label_rewritten": "positive",
+      "human_note": "同义改写，评价对象与情感均不变。",
+      "expected_change": "stable",
+      "focus": "同义改写下的预测稳定性"
+    },
+    {
+      "id": "P2",
+      "category": "paraphrase",
+      "category_cn": "保持含义的改写",
+      "original": "It was a waste of two hours.",
+      "rewritten": "I regret spending two hours on this.",
+      "human_label_original": "negative",
+      "human_label_rewritten": "negative",
+      "human_note": "两种说法都表达后悔与浪费时间，情感一致为负面。",
+      "expected_change": "stable",
+      "focus": "换用不同句式后负面情感是否保持"
+    }
+  ]
+}

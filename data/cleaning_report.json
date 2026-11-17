@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-11-17T18:14:06+08:00",
+  "what_was_cleaned": [
+    "<br /> / <br> 换行标记 -> 换行符",
+    "其它残留 HTML 标签 -> 空格",
+    "多余空白（连续空格、制表符、不换行空格）压成单个空格",
+    "每行首尾空白去除，空行丢弃",
+    "控制字符与 BOM 去除，Unicode 统一为 NFKC 形式"
+  ],
+  "checks": {
+    "empty_text": "清洗后无可见字符即判为空文本，剔除并从同一来源补齐",
+    "duplicate_text": "去除全部空白并忽略大小写后比较，重复则剔除并补齐",
+    "train_test_overlap": "训练集与测试集共用同一张已见文本表，测试集中与之重复的样本会记为 cross_split_overlap 并剔除补齐"
+  },
+  "removed_by_reason": {
+    "train": {
+      "empty_text": 0,
+      "duplicate_within_split": 0,
+      "cross_split_overlap": 0
+    },
+    "test": {
+      "empty_text": 0,
+      "duplicate_within_split": 0,
+      "cross_split_overlap": 0
+    },
+    "pool": {
+      "empty_text": 0,
+      "duplicate_within_split": 0,
+      "cross_split_overlap": 0
+    }
+  },
+  "removed_total": {
+    "train": 0,
+    "test": 0,
+    "pool": 0
+  },
+  "scanned_candidates": {
+    "train/negative": 500,
+    "train/positive": 500,
+    "test/negative": 100,
+    "test/positive": 100,
+    "pool/negative": 250,
+    "pool/positive": 250
+  },
+  "final_counts": {
+    "train": 1000,
+    "test": 200,
+    "retrieval_pool": 500
+  },
+  "rejected_detail": [],
+  "notes": [
+    "IMDB 官方 train/test 本身不重叠；这里仍做一次实测，并把结果写入本文件。",
+    "检索库来源：从 IMDB train 中排除已抽作训练/测试的 1200 条后固定选取（与训练集、测试集均不重叠）"
+  ]
+}

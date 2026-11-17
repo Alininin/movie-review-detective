@@ -1,0 +1,41 @@
+{
+  "doc": "相似影评检索的人工检查用查询：5 条英文查询，覆盖 5 个主题（演技、剧情、节奏、配乐、台词幽默）。逐条对 Top-5 结果判相关/不相关写在本文件生成后的人工记录文件 experiments/retrieval_check.csv 中。",
+  "judging_rule": "相关性以「是否表达查询的主要观点」为依据，不能只看是否出现相同单词。例如查询关于演技时，只谈剧情但没提表演的影评判为不相关。",
+  "queries": [
+    {
+      "id": "Q1",
+      "topic": "演技",
+      "topic_en": "acting",
+      "text": "The lead actor gave a powerful performance with great emotional depth.",
+      "note": "关注表演质量与演员表现"
+    },
+    {
+      "id": "Q2",
+      "topic": "剧情",
+      "topic_en": "plot",
+      "text": "The story has an unexpected twist that keeps the audience guessing until the end.",
+      "note": "关注剧情设计与反转"
+    },
+    {
+      "id": "Q3",
+      "topic": "节奏",
+      "topic_en": "pacing",
+      "text": "The pacing is painfully slow and the film drags badly in the middle.",
+      "note": "关注节奏与是否拖沓"
+    },
+    {
+      "id": "Q4",
+      "topic": "配乐",
+      "topic_en": "soundtrack",
+      "text": "The soundtrack is beautiful and fits the mood of every scene perfectly.",
+      "note": "关注配乐与氛围"
+    },
+    {
+      "id": "Q5",
+      "topic": "台词与幽默",
+      "topic_en": "dialogue",
+      "text": "The dialogue is witty and most of the jokes land surprisingly well.",
+      "note": "关注台词写作与喜剧效果"
+    }
+  ]
+}
