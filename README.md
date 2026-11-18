@@ -10,32 +10,30 @@
 > movie
 > 一个本地运行的中文网页系统：用两个模型判断英文影评的情感、用向量检索相似影评，并把实验指标、错误案例与操作历史都放进网页里。
 
-![影评资料库](docs/images/library.png)
+![影评资料库](docs/images/library.jpg)
 
 ---
 
 ## 目录
 
-- [影评侦探 · 情感分析与相似影评检索](#影评侦探--情感分析与相似影评检索)
-  - [目录](#目录)
-  - [项目做了什么](#项目做了什么)
-  - [五个页面](#五个页面)
-  - [环境要求](#环境要求)
-  - [快速开始（三步）](#快速开始三步)
-  - [两条自检命令](#两条自检命令)
-  - [首次运行的离线资源准备](#首次运行的离线资源准备)
-  - [目录结构](#目录结构)
-    - [修改前端时](#修改前端时)
-  - [接口清单](#接口清单)
-  - [环境变量与离线运行](#环境变量与离线运行)
-    - [三种使用 Hugging Face 的方式](#三种使用-hugging-face-的方式)
-    - [检索库的取样口径](#检索库的取样口径)
-  - [实验材料在哪](#实验材料在哪)
-  - [评分点与文件对照](#评分点与文件对照)
-  - [常见问题](#常见问题)
-  - [依赖版本](#依赖版本)
-  - [说明](#说明)
-  - [License](#license)
+- [项目做了什么](#项目做了什么)
+- [界面：胶片放映厅](#界面胶片放映厅)
+- [任务书之外的扩展](#任务书之外的扩展)
+- [五个页面](#五个页面)
+- [环境要求](#环境要求)
+- [快速开始（三步）](#快速开始三步)
+- [两条自检命令](#两条自检命令)
+- [首次运行的离线资源准备](#首次运行的离线资源准备)
+- [目录结构](#目录结构)
+- [接口清单](#接口清单)
+- [环境变量与离线运行](#环境变量与离线运行)
+- [分享给别人看](#分享给别人看)
+- [实验材料在哪](#实验材料在哪)
+- [评分点与文件对照](#评分点与文件对照)
+- [常见问题](#常见问题)
+- [依赖版本](#依赖版本)
+- [说明](#说明)
+- [License](#license)
 
 ---
 
@@ -59,24 +57,44 @@
 > - `score` 是模型输出的**分类分数**，不能解释为「判断正确的概率」；
 > - `similarity` 是**余弦相似度**，不是准确率，也不代表影评观点一致。
 
+## 界面：胶片放映厅
+
+界面不是套模板：底色取放映厅的暗部（`#0b0a09`），主色只用一种暖金（`#d9a94c`），
+标题用衬线体（宋体／Noto Serif SC），面板做成票根样式（左侧齿孔虚线），
+全站叠一层极淡的胶片颗粒与银幕暗角。没有引入任何 UI 框架或图标库——
+样式集中在 `frontend/src/style.css`（约 700 行，全部用 CSS 变量组织），
+想改主色只改 `:root` 里的一个变量即可。
+
+## 任务书之外的扩展
+
+任务书列的是最低要求，下面五项是在此基础上自己加的，**全部是真实计算，没有一处编造结果**：
+
+| 扩展 | 怎么做的 | 为什么不算「造假」 |
+|---|---|---|
+| **词贡献解释** | 新增 `POST /api/explain`：用训练好的 `TfidfVectorizer` 变换输入，再乘逻辑回归的 `coef_`，得到每个词／n-gram 对这条样本的贡献值 | 数值直接来自模型参数（`TF-IDF 权重 × 回归系数`），可复算；页面明确写「不是概率，不能跨样本比较」，DistilBERT 是黑盒就不做词级归因 |
+| **分歧样本浏览器** | 新增 `GET /api/divergence`：读 `predictions_test.csv`，取出测试集里两个模型意见不一致的 38 条，可按「谁判对」筛选 | 样本、标签、预测都来自已有的实验文件，文本按 `sample_id` 与 `reviews.csv` 对齐 |
+| **检索命中词高亮** | 纯前端词面对齐（`frontend/src/text.js`），标出结果里与查询重合的词并计数 | 只用于解释排序线索，页面同时说明「相似度高不等于词面重合多」，排序仍由后端余弦相似度决定 |
+| **长度分布联动筛选** | 点柱状图的柱子，按该分箱的词数区间筛选下方列表（后端 `GET /api/reviews` 增加 `min_words` / `max_words`） | 分箱边界来自 `stats.json` 的真实统计，筛选结果条数可核对 |
+| **可分享链接** | `#/analyze?text=…`、`#/search?q=…`、`#/challenge?pair=N1` 打开即自动跑一次；分析页有「复制可分享链接」按钮 | 链接只带**输入**，结果仍然每次由后端实时计算，不会把结果写进链接冒充模型输出 |
+
 ## 五个页面
 
 | 页面 | 内容 |
 |---|---|
-| 影评资料库 | 样本统计、长度分布图、分页浏览、按正负标签筛选、关键词搜索 |
-| 情感分析 | 单条双模型分析（标签 / 分数 / 耗时 / 截断提示）、CSV 批量分析与结果下载 |
-| 相似影评搜索 | 输入查询、5 条预设查询、Top-5 结果、相似度、数据集原始标签、完整原文 |
-| 模型挑战 | 6 对预置样本、现场输入句子对、两个模型并排对比与合理性判断 |
-| 实验与历史 | 指标比较表、混淆矩阵、Precision@5、错误案例分析、SQLite 历史查看与删除 |
+| 影评资料库 | 样本统计、长度分布图（**点柱子联动筛选**）、分页浏览、按正负标签筛选、关键词搜索 |
+| 情感分析 | 单条双模型分析（标签 / 分数 / 耗时 / 截断提示）、**词贡献解释**、**可分享链接**、CSV 批量分析与结果下载 |
+| 相似影评搜索 | 输入查询、5 条预设查询、Top-5 结果、相似度、数据集原始标签、完整原文、**命中词高亮** |
+| 模型挑战 | 6 对预置样本、现场输入句子对、**词级差异高亮**、两个模型并排对比与合理性判断 |
+| 实验与历史 | 指标比较表、混淆矩阵（深色版）、Precision@5、**分歧样本浏览器**、错误案例分析、SQLite 历史查看与删除 |
 
 <table>
 <tr>
-<td><img src="docs/images/analyze.png" alt="情感分析" /></td>
-<td><img src="docs/images/search.png" alt="相似影评搜索" /></td>
+<td><img src="docs/images/analyze.jpg" alt="情感分析" /></td>
+<td><img src="docs/images/search.jpg" alt="相似影评搜索" /></td>
 </tr>
 <tr>
-<td><img src="docs/images/challenge.png" alt="模型挑战" /></td>
-<td><img src="docs/images/lab.png" alt="实验与历史" /></td>
+<td><img src="docs/images/challenge.jpg" alt="模型挑战" /></td>
+<td><img src="docs/images/lab.jpg" alt="实验与历史" /></td>
 </tr>
 </table>
 
@@ -142,7 +160,7 @@ copy .env.example .env                                          # Windows
 | 脚本 | 检查什么 | 预期输出 |
 |---|---|---|
 | `09_verify_materials.py` | 抽样清单与原始行号、训练/测试无重叠、检索库与向量 ID 一一对应、逐条预测与测试集 ID 对齐、Accuracy / Macro-F1 / 混淆矩阵 / 一致率 / Precision@5 全部重新计算、案例引用的样本 ID 都出自测试集 | `材料一致性自检全部通过：47/47 项` |
-| `08_smoke_test.py` | 四个组件就绪、统计与分页筛选、双模型单条分析、空输入/超长/缺列/超 20 条的提示、CSV 批量、Top-5 排序、6 对挑战样本、指标可读取、历史增删、重启后仍在、前端与 `/docs` 可访问 | `自检全部通过：58/58 项` |
+| `08_smoke_test.py` | 四个组件就绪、统计与分页筛选、双模型单条分析、空输入/超长/缺列/超 20 条的提示、CSV 批量、Top-5 排序、6 对挑战样本、指标可读取、历史增删、重启后仍在、**词贡献与分歧样本接口**、长度区间筛选、前端与 `/docs` 可访问 | `自检全部通过：73/73 项` |
 
 两个脚本都会在结束时自动清理自己写入的历史记录，不会污染你的历史列表；退出码 0 表示全通过。
 
@@ -155,7 +173,7 @@ copy .env.example .env                                          # Windows
 | 1 | `python scripts/01_build_dataset.py` | `data/reviews.csv`、`retrieval_pool.csv`、`sampling_manifest.json`、`cleaning_report.json`、`stats.json` | 首次约 1~3 分钟（下载 IMDB） |
 | 2 | `python scripts/02_train_tfidf.py` | `models/tfidf_lr.joblib`、`tfidf_meta.json` | 约 1 秒 |
 | 3 | `python scripts/03_verify_reload.py` | `experiments/reload_check.json` | 约 2 秒 |
-| 4 | `python scripts/04_evaluate.py` | `experiments/metrics.json`、`predictions_test.csv`、`confusion_matrix.png`、`error_cases_auto.md` | 首次约 1~2 分钟（下载 DistilBERT），之后约 10 秒 |
+| 4 | `python scripts/04_evaluate.py` | `experiments/metrics.json`、`predictions_test.csv`、`confusion_matrix.png`（报告用白底）、`confusion_matrix_dark.png`（网页用深色）、`error_cases_auto.md` | 首次约 1~2 分钟（下载 DistilBERT），之后约 10 秒 |
 | 5 | `python scripts/05_build_embeddings.py` | `data/embeddings.npy`、`embeddings_ids.json`、`experiments/embedding_build.json` | 首次约 1 分钟（下载 MiniLM） |
 | 6 | `python scripts/06_retrieval_check.py --emit` | `experiments/retrieval_results.csv`、`retrieval_check.csv`（待人工标注）、`retrieval_top5.md` | 约 5 秒 |
 | 7 | `python scripts/07_challenge_report.py` | `experiments/challenge_results.csv`、`challenge_results.md`（6 对句子在两个模型下的输出与合理性判断） | 约 5 秒 |
@@ -181,7 +199,8 @@ movie-review-detective/
 │     ├─ predict.py          单条 / CSV 批量预测
 │     ├─ search.py           相似影评检索
 │     ├─ challenge.py        句子对比较
-│     └─ experiments.py      实验指标与历史
+│     ├─ experiments.py      实验指标与历史
+│     └─ insight.py          扩展：词贡献解释与分歧样本
 ├─ common/
 │  ├─ config.py              路径、随机种子、配额、模型标识（全项目统一口径）
 │  └─ text_clean.py          清洗与长度统计（数据集构建与接口共用）
@@ -196,6 +215,8 @@ movie-review-detective/
 │  ├─ 08_smoke_test.py       端到端自检（需要后端已启动）
 │  └─ 09_verify_materials.py 材料一致性自检（不需要后端）
 ├─ frontend/                 前端（Vue 3 + Vite + ECharts）
+│  ├─ src/style.css          胶片放映厅视觉系统（配色 / 字阶 / 组件样式全在这里）
+│  ├─ src/text.js            前端文本工具：命中词高亮、句子词级差异
 │  ├─ src/views/             五个页面
 │  ├─ src/api.js             统一的接口调用封装
 │  └─ dist/                  构建产物（已提交，后端直接托管）
@@ -221,6 +242,10 @@ npm run dev      # 开发模式，http://127.0.0.1:5173，/api 自动代理到 8
 npm run build    # 重新生成 dist，后端会自动托管新文件
 ```
 
+**改配色/字体**：只动 `src/style.css` 顶部的 `:root`，例如把 `--gold: #d9a94c` 换成别的色相，
+全站标题、按钮、图表、进度条会一起变（图表颜色在 `views/Library.vue` 里读的是同一组变量的近似色值）。
+没有引入 Tailwind、Element Plus 之类的 UI 框架，改起来不会有「框架样式覆盖不掉」的问题。
+
 ## 接口清单
 
 | 方法 | 路径 | 说明 |
@@ -235,10 +260,15 @@ npm run build    # 重新生成 dist，后端会自动托管新文件
 | GET | `/api/challenge/presets` | 6 对预置样本 |
 | POST | `/api/challenge` | 比较一对句子在两个模型下的输出 |
 | GET | `/api/experiments` | 指标、混淆矩阵、错误案例、检索检查 |
-| GET | `/api/experiments/confusion-matrix.png` | 混淆矩阵图 |
+| GET | `/api/experiments/confusion-matrix.png` | 混淆矩阵图（深色版，地址带 `?v=` 版本号防缓存） |
 | GET | `/api/history` | 历史列表（`limit`、`offset`） |
 | DELETE | `/api/history/{id}` | 删除一条历史 |
 | DELETE | `/api/history` | 清空历史 |
+| POST | `/api/explain` | **扩展**：TF-IDF 词贡献（哪些词推向正面／负面） |
+| GET | `/api/divergence` | **扩展**：两个模型意见不一致的测试样本（可按 `winner=tfidf|distilbert` 筛选） |
+
+`GET /api/reviews` 支持 `split`、`label`、`keyword`、`min_words`、`max_words`、`page`、`page_size`，
+其中词数区间供长度分布图联动筛选使用。
 
 **输入的异常提示**（都会返回中文说明，不会被静默吞掉）：
 
@@ -249,6 +279,7 @@ npm run build    # 重新生成 dist，后端会自动托管新文件
 | CSV 缺少 `text` 列 | 400 `CSV 缺少 text 列。当前表头：…` |
 | CSV 为空 | 400 `CSV 文件为空，请上传包含 text 列的文件` |
 | CSV 超过 20 条 | 400 `一次最多 20 条，当前有效行 N 条…` |
+| 词数区间颠倒 | 400 `词数区间不成立：下限 … 不小于上限 …` |
 | 模型未就绪 | 503 + 具体缺哪个组件 |
 
 ## 环境变量与离线运行
@@ -301,13 +332,26 @@ python scripts/01_build_dataset.py --pool-source from_train_1000
 
 改完需要重新执行第 1、5 步。
 
+## 分享给别人看
+
+默认只监听 `127.0.0.1`，**只有本机能打开**——这是任务书要求的「本地 CPU 运行」形态。想让别人看到，有三种办法：
+
+| 方式 | 怎么做 | 适用场景 |
+|---|---|---|
+| **局域网**（推荐） | `.env` 里改 `HOST=0.0.0.0` 后启动，控制台会打印「已对局域网开放：http://192.168.x.x:8000」；同一 WiFi 下的电脑／手机直接打开这个地址 | 宿舍、实验室、答辩现场投屏 |
+| **临时公网链接** | 先按上面启动，再另开一个终端跑 `cloudflared tunnel --url http://127.0.0.1:8000`（需先装 cloudflared），它会打印一个 `https://xxx.trycloudflare.com` 链接 | 老师不在现场时远程看一眼；关掉终端链接即失效，模型仍跑在你本机 |
+| **可分享链接** | 页面上的「复制可分享链接」按钮，或直接拼 URL：`#/analyze?text=…`、`#/search?q=…`、`#/challenge?pair=N1` | 把某个具体问题发给别人，让对方点开就能复现（链接只带输入，结果仍是后端实时算） |
+
+> 不建议把项目整体部署到云上：任务书要求本地运行，云上还要重新下载 3 个模型、
+> CPU 内存吃紧，反而容易在验收时翻车。临时隧道足够用，用完即关。
+
 ## 实验材料在哪
 
 | 材料 | 文件 |
 |---|---|
 | 200 条测试样本逐条预测 | `experiments/predictions_test.csv` |
 | 指标、混淆矩阵数值、耗时、运行环境 | `experiments/metrics.json` |
-| 混淆矩阵图 | `experiments/confusion_matrix.png` |
+| 混淆矩阵图 | `experiments/confusion_matrix.png`（白底，报告用）、`confusion_matrix_dark.png`（深色，网页用） |
 | 错误案例分析（7 条，人工撰写） | `experiments/error_cases.md` |
 | 错误与分歧样本清单（自动生成） | `experiments/error_cases_auto.md` |
 | 5 条查询 × Top-5 人工判断（25 条） | `experiments/retrieval_check.csv` |
@@ -354,7 +398,7 @@ python scripts/01_build_dataset.py --pool-source from_train_1000
 | E4 | 挑战页面及 6 对样本 | 5 | 模型挑战页、`data/challenge_pairs.json` |
 | E5 | 实验展示及历史增删查 | 5 | 实验与历史页、`backend/db.py` |
 | E6 | CSV 批量分析及下载 | 4 | 情感分析页（示例文件 `data/sample_batch.csv`） |
-| F1 | 前后端联调及启动说明 | 7 | 本文档 + `python -m backend.main` 一条命令 + `scripts/08_smoke_test.py` 58 项自检 |
+| F1 | 前后端联调及启动说明 | 7 | 本文档 + `python -m backend.main` 一条命令 + `scripts/08_smoke_test.py` 73 项自检 |
 | F2 | 依赖、脚本、报告、AI 说明 | 3 | `requirements.txt`、`frontend/package.json`、`report/`、`AI_USAGE.md`、`scripts/09_verify_materials.py` |
 
 ## 常见问题
@@ -392,6 +436,14 @@ A：`.venv/Scripts/python report/build_report.py`（依赖 `python-docx`）。�
 **Q：自检脚本报连不上服务？**
 A：`scripts/08_smoke_test.py` 默认连 `http://127.0.0.1:8000`。改过端口时用
 `.venv/Scripts/python scripts/08_smoke_test.py --base-url http://127.0.0.1:8010`。
+
+**Q：改了混淆矩阵的配色，网页上还是旧图？**
+A：图片地址由后端带上文件修改时间（`?v=…`），正常不会读到缓存。手动重画（不重新评测）用
+`.venv/Scripts/python scripts/04_evaluate.py --replot`，会同时生成白底版（报告用）和深色版（网页用）。
+
+**Q：想要一个公网链接发给老师？**
+A：见上文「分享给别人看」。局域网最快；不在同一网络就用 cloudflared 临时隧道，
+链接关掉即失效，别把它当成正式部署。
 
 ## 依赖版本
 
