@@ -42,6 +42,7 @@ export const api = {
   },
 
   predict: (text) => postJSON('/api/predict', { text }),
+  explain: (text, topN = 12) => postJSON('/api/explain', { text, top_n: topN }),
   batch: (file) => {
     const form = new FormData()
     form.append('file', file)
@@ -55,6 +56,8 @@ export const api = {
   challenge: (original, rewritten) => postJSON('/api/challenge', { original, rewritten }),
 
   experiments: () => request('/api/experiments'),
+  divergence: (limit = 5, offset = 0, winner = 'all') =>
+    request(`/api/divergence?limit=${limit}&offset=${offset}&winner=${winner}`),
   history: (limit = 20, offset = 0) => request(`/api/history?limit=${limit}&offset=${offset}`),
   deleteHistory: (id) => request(`/api/history/${id}`, { method: 'DELETE' }),
 }

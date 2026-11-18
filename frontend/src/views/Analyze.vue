@@ -1,13 +1,21 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { api, formatMs, formatScore } from '../api'
 
 const MAX_CHARS = 5000
+const route = useRoute()
 
 const text = ref('')
 const loading = ref(false)
 const error = ref('')
 const result = ref(null)
+
+// 词贡献解释：与预测结果同时请求，失败不影响主结果展示
+const explainResult = ref(null)
+const explainLoading = ref(false)
+const explainError = ref('')
+const shareCopied = ref(false)
 
 const batchFile = ref(null)
 const batchLoading = ref(false)
@@ -18,6 +26,16 @@ const fileInput = ref(null)
 const charCount = computed(() => text.value.length)
 const overLimit = computed(() => charCount.value > MAX_CHARS)
 
+const explainTerms = computed(() => explainResult.value?.terms ?? [])
+const maxContribution = computed(() =>
+  Math.max(1e-9, ...explainTerms.value.map((term) => Math.abs(term.contribution)))
+)
+
+function contributionWidth(term) {
+  // 以中轴为 0，最长的贡献占满半幅
+  return `${Math.max(2, Math.round((Math.abs(term.contribution) / maxContribution.value) * 50))}%`
+}
+
 const sampleTexts = [
   'The actors were excellent, but the story was boring.',
   'I really enjoyed this film. The pacing was perfect and the ending was unforgettable.',
@@ -27,6 +45,7 @@ const sampleTexts = [
 function fillSample(sample) {
   text.value = sample
   result.value = null
+  explainResult.value = null
   error.value = ''
 }
 
@@ -35,6 +54,8 @@ async function analyze() {
   if (loading.value) return
   error.value = ''
   result.value = null
+  explainResult.value = null
+  explainError.value = ''
 
   if (!text.value.trim()) {
     error.value = '输入为空，请先填写英文影评文本。'
@@ -46,12 +67,26 @@ async function analyze() {
   }
 
   loading.value = true
+  explainLoading.value = true
   try {
-    result.value = await api.predict(text.value)
-  } catch (e) {
-    error.value = e.message
+    // 两个请求都打到真实后端：预测是模型输出，解释是同一个线性模型的系数贡献
+    const [prediction, explanation] = await Promise.allSettled([
+      api.predict(text.value),
+      api.explain(text.value, 12),
+    ])
+    if (prediction.status === 'fulfilled') {
+      result.value = prediction.value
+    } else {
+      error.value = prediction.reason?.message || '分析失败'
+    }
+    if (explanation.status === 'fulfilled') {
+      explainResult.value = explanation.value
+    } else {
+      explainError.value = explanation.reason?.message || '词贡献计算失败'
+    }
   } finally {
     loading.value = false
+    explainLoading.value = false
   }
 }
 
@@ -114,8 +149,25 @@ function modelEntries(payload) {
 }
 
 onMounted(() => {
-  // 预留：页面加载时不做任何预置结果填充，所有结果都由后端实时计算
+  // 支持可分享链接：#/analyze?text=... 只把输入带过来，结果仍然由后端实时计算
+  const shared = route.query.text
+  if (typeof shared === 'string' && shared.trim()) {
+    text.value = shared.slice(0, MAX_CHARS)
+    analyze()
+  }
 })
+
+// 复制当前输入的分享链接（不含任何结果，避免看起来像「预置答案」）
+async function copyShareLink() {
+  const url = `${location.origin}${location.pathname}#/analyze?text=${encodeURIComponent(text.value)}`
+  try {
+    await navigator.clipboard.writeText(url)
+    shareCopied.value = true
+    setTimeout(() => (shareCopied.value = false), 2000)
+  } catch (e) {
+    shareCopied.value = false
+  }
+}
 </script>
 
 <template>
@@ -152,6 +204,9 @@ onMounted(() => {
           <span v-if="loading" class="spinner"></span>
           {{ loading ? '模型推理中…' : '开始分析' }}
         </button>
+        <button :disabled="!text.trim()" @click="copyShareLink">
+          {{ shareCopied ? '已复制' : '复制可分享链接' }}
+        </button>
       </div>
 
       <div v-if="overLimit" class="alert warn" style="margin-top: 12px">
@@ -175,7 +230,7 @@ onMounted(() => {
       </h3>
 
       <div class="grid grid-2">
-        <div v-for="model in modelEntries(result)" :key="model.key" class="stat">
+        <div v-for="model in modelEntries(result)" :key="model.key" class="stat ticket">
           <div class="label">{{ model.model }}</div>
           <div style="display: flex; align-items: baseline; gap: 10px; margin: 4px 0 10px">
             <span class="badge" :class="model.label === 1 ? 'pos' : 'neg'" style="font-size: 13px">
@@ -207,6 +262,68 @@ onMounted(() => {
       </div>
 
       <p class="small muted" style="margin: 12px 0 0">{{ result.score_note }}</p>
+    </div>
+
+    <div v-if="result" class="panel">
+      <h3>
+        模型依据 · 词贡献
+        <span class="hint">TF-IDF + 逻辑回归的线性贡献，数值来自训练好的模型</span>
+      </h3>
+
+      <div v-if="explainLoading" class="empty">
+        <span class="spinner dark"></span>正在计算词贡献……
+      </div>
+
+      <div v-else-if="explainError" class="alert warn">{{ explainError }}</div>
+
+      <template v-else-if="explainResult">
+        <div v-if="explainResult.empty_note" class="alert warn">
+          {{ explainResult.empty_note }}
+          （已知词 {{ explainResult.known_tokens }} 个 / 输入 {{ explainResult.input_tokens }} 个词）
+        </div>
+
+        <template v-else>
+          <div class="term-cloud" style="margin-bottom: 16px">
+            <span
+              v-for="term in explainTerms"
+              :key="term.token"
+              class="term"
+              :class="term.direction === 'positive' ? 'push-pos' : 'push-neg'"
+            >
+              <span class="token">{{ term.token }}</span>
+            </span>
+          </div>
+
+          <div
+            v-for="term in explainTerms.slice(0, 6)"
+            :key="'row-' + term.token"
+            class="contrib-row"
+          >
+            <span class="mono" style="color: var(--cream-dim)">{{ term.token }}</span>
+            <span class="contrib-axis">
+              <span class="mid"></span>
+              <span
+                class="fill"
+                :class="term.direction === 'positive' ? 'pos' : 'neg'"
+                :style="{ width: contributionWidth(term) }"
+              ></span>
+            </span>
+            <span
+              class="mono"
+              style="text-align: right"
+              :style="{ color: term.direction === 'positive' ? 'var(--pos)' : 'var(--neg)' }"
+            >
+              {{ term.contribution > 0 ? '+' : '' }}{{ term.contribution.toFixed(3) }}
+            </span>
+          </div>
+
+          <p class="small muted" style="margin: 12px 0 0">{{ explainResult.note }}</p>
+          <p class="small muted" style="margin: 4px 0 0">
+            落在训练集词表里的词 / n-gram 共 {{ explainResult.known_tokens }} 个，输入共
+            {{ explainResult.input_tokens }} 个词；截距项 {{ explainResult.intercept }}。
+          </p>
+        </template>
+      </template>
     </div>
 
     <div class="panel">

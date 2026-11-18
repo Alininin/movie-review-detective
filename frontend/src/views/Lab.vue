@@ -11,11 +11,21 @@ const history = ref({ items: [], total: 0 })
 const historyError = ref('')
 const historyLoading = ref(false)
 
+// 分歧样本浏览器：数据来自 experiments/predictions_test.csv（经 /api/divergence 读取）
+const divergence = ref({ items: [], total: 0, test_total: 0, all_total: 0, tfidf_wins: 0, distilbert_wins: 0 })
+const divergenceLoading = ref(false)
+const divergenceError = ref('')
+const divergenceOffset = ref(0)
+const divergenceLimit = 5
+const divergenceWinner = ref('all')
+
 const metrics = computed(() => data.value?.metrics ?? null)
 const retrieval = computed(() => data.value?.retrieval ?? null)
 const errorCasesHtml = computed(() => renderMarkdown(data.value?.error_cases_markdown || ''))
-// 用变量绑定而非字面量，避免 Vite 把它当成需要打包的静态资源
-const confusionMatrixUrl = '/api/experiments/confusion-matrix.png'
+// 图片地址由后端给出（带文件修改时间），重新生成混淆矩阵后不会显示缓存的旧图
+const confusionMatrixUrl = computed(
+  () => data.value?.artifacts?.confusion_matrix_url || '/api/experiments/confusion-matrix.png'
+)
 
 const modelRows = computed(() => {
   if (!metrics.value) return []
@@ -46,6 +56,35 @@ async function loadHistory() {
   }
 }
 
+async function loadDivergence() {
+  divergenceLoading.value = true
+  divergenceError.value = ''
+  try {
+    divergence.value = await api.divergence(
+      divergenceLimit,
+      divergenceOffset.value,
+      divergenceWinner.value
+    )
+  } catch (e) {
+    divergenceError.value = e.message
+  } finally {
+    divergenceLoading.value = false
+  }
+}
+
+function setWinner(winner) {
+  divergenceWinner.value = winner
+  divergenceOffset.value = 0
+  loadDivergence()
+}
+
+function pageDivergence(delta) {
+  const next = divergenceOffset.value + delta * divergenceLimit
+  if (next < 0 || next >= divergence.value.total) return
+  divergenceOffset.value = next
+  loadDivergence()
+}
+
 async function removeHistory(id) {
   try {
     await api.deleteHistory(id)
@@ -58,6 +97,7 @@ async function removeHistory(id) {
 onMounted(async () => {
   await loadExperiments()
   await loadHistory()
+  await loadDivergence()
 })
 </script>
 
@@ -136,7 +176,7 @@ onMounted(async () => {
         <img
           :src="confusionMatrixUrl"
           alt="混淆矩阵"
-          style="max-width: 100%; border: 1px solid var(--border); border-radius: 8px"
+          style="max-width: 100%; border: 1px solid var(--line); border-radius: 4px; background: #0f0d0b"
         />
       </div>
 
@@ -178,6 +218,75 @@ onMounted(async () => {
           </tbody>
         </table>
         <p class="small muted" style="margin-bottom: 0">{{ retrieval.scope_note }}</p>
+      </div>
+
+      <div class="panel">
+        <h3>
+          分歧样本浏览器
+          <span class="hint">
+            测试集 {{ divergence.test_total || '—' }} 条中，两模型意见不一致 {{ divergence.all_total }} 条
+          </span>
+        </h3>
+
+        <div class="toolbar" style="margin-bottom: 12px">
+          <button :class="{ primary: divergenceWinner === 'all' }" @click="setWinner('all')">
+            全部 {{ divergence.all_total }}
+          </button>
+          <button
+            :class="{ primary: divergenceWinner === 'distilbert' }"
+            @click="setWinner('distilbert')"
+          >
+            DistilBERT 对 / TF-IDF 错 {{ divergence.distilbert_wins }}
+          </button>
+          <button :class="{ primary: divergenceWinner === 'tfidf' }" @click="setWinner('tfidf')">
+            TF-IDF 对 / DistilBERT 错 {{ divergence.tfidf_wins }}
+          </button>
+          <div class="grow"></div>
+          <span class="small muted">每页 {{ divergenceLimit }} 条</span>
+          <button :disabled="divergenceOffset <= 0 || divergenceLoading" @click="pageDivergence(-1)">
+            上一页
+          </button>
+          <button
+            :disabled="divergenceOffset + divergenceLimit >= divergence.total || divergenceLoading"
+            @click="pageDivergence(1)"
+          >
+            下一页
+          </button>
+        </div>
+
+        <div v-if="divergenceError" class="alert error">{{ divergenceError }}</div>
+        <div v-if="divergenceLoading" class="empty">
+          <span class="spinner dark"></span>正在读取分歧样本……
+        </div>
+
+        <template v-else>
+          <div v-for="item in divergence.items" :key="item.sample_id" class="diverge-item">
+            <div class="head">
+              <span class="mono">{{ item.sample_id }}</span>
+              <span class="badge" :class="item.true_label === 1 ? 'pos' : 'neg'">
+                真实：{{ item.true_label_cn }}
+              </span>
+              <span class="small muted">{{ item.word_len }} 词</span>
+              <div class="grow"></div>
+              <span class="small muted">
+                TF-IDF → {{ item.tfidf_label_cn }}（{{ formatScore(item.tfidf_score) }}）
+              </span>
+              <span class="badge" :class="item.tfidf_correct ? 'pos' : 'neg'">
+                {{ item.tfidf_correct ? '对' : '错' }}
+              </span>
+              <span class="small muted">
+                DistilBERT → {{ item.distilbert_label_cn }}（{{ formatScore(item.distilbert_score) }}）
+              </span>
+              <span class="badge" :class="item.distilbert_correct ? 'pos' : 'neg'">
+                {{ item.distilbert_correct ? '对' : '错' }}
+              </span>
+            </div>
+            <div class="review-text" style="max-height: 96px">{{ item.text }}</div>
+          </div>
+          <div v-if="!divergence.items.length" class="empty">没有符合条件的分歧样本。</div>
+        </template>
+
+        <p class="small muted" style="margin: 10px 0 0">{{ divergence.note }}</p>
       </div>
 
       <div class="panel">

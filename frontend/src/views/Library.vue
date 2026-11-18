@@ -7,6 +7,8 @@ const stats = ref(null)
 const statsError = ref('')
 
 const filters = ref({ split: 'all', label: 'all', keyword: '' })
+// 长度区间筛选：由长度分布图的柱子点击产生（真实统计区间，不是猜的）
+const wordRange = ref(null)
 const page = ref(1)
 const pageSize = 10
 const list = ref({ items: [], total: 0, pages: 1 })
@@ -23,33 +25,83 @@ const trainLength = computed(() => stats.value?.length?.train?.word ?? null)
 
 function renderChart() {
   if (!chartEl.value || !stats.value) return
-  if (!chart) chart = echarts.init(chartEl.value)
+  if (!chart) {
+    chart = echarts.init(chartEl.value)
+    // 点柱子 → 按该区间筛选下方列表；再点一次取消
+    chart.on('click', (params) => {
+      const histogram = stats.value?.histogram?.train
+      if (!histogram || params.dataIndex == null) return
+      const min = histogram.bin_edges[params.dataIndex]
+      const max = histogram.bin_edges[params.dataIndex + 1]
+      const current = wordRange.value
+      wordRange.value =
+        current && current.min === min && current.max === max
+          ? null
+          : { min, max, label: histogram.bin_labels[params.dataIndex] }
+      page.value = 1
+      loadList()
+      renderChart()
+    })
+  }
   const histogram = stats.value.histogram.train
-  chart.setOption({
-    grid: { left: 46, right: 16, top: 28, bottom: 34 },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    xAxis: {
-      type: 'category',
-      data: histogram.bin_labels,
-      axisLabel: { fontSize: 10, rotate: 38, color: '#6b7280' },
-      axisLine: { lineStyle: { color: '#e5e7eb' } },
-    },
-    yAxis: {
-      type: 'value',
-      name: '样本数',
-      nameTextStyle: { fontSize: 10, color: '#9ca3af' },
-      splitLine: { lineStyle: { color: '#f3f4f6' } },
-      axisLabel: { fontSize: 10, color: '#6b7280' },
-    },
-    series: [
-      {
-        type: 'bar',
-        data: histogram.counts,
-        itemStyle: { color: '#6366f1', borderRadius: [3, 3, 0, 0] },
-        barMaxWidth: 26,
+  const selected = wordRange.value
+  chart.setOption(
+    {
+      grid: { left: 48, right: 18, top: 30, bottom: 44 },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(217,169,76,0.07)' } },
+        backgroundColor: '#1b1815',
+        borderColor: 'rgba(217,169,76,0.35)',
+        textStyle: { color: '#f4eee2', fontSize: 12 },
+        formatter: (items) => {
+          const item = items[0]
+          const min = histogram.bin_edges[item.dataIndex]
+          const max = histogram.bin_edges[item.dataIndex + 1]
+          return `${min}–${max} 词<br/>训练样本 ${item.value} 条<br/><span style="color:#948a79">点击按此区间筛选</span>`
+        },
       },
-    ],
-  })
+      xAxis: {
+        type: 'category',
+        data: histogram.bin_labels,
+        axisLabel: { fontSize: 10, rotate: 38, color: '#948a79' },
+        axisLine: { lineStyle: { color: 'rgba(217,169,76,0.25)' } },
+        axisTick: { show: false },
+      },
+      yAxis: {
+        type: 'value',
+        name: '样本数',
+        nameTextStyle: { fontSize: 10, color: '#6f6659' },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+        axisLabel: { fontSize: 10, color: '#948a79' },
+      },
+      series: [
+        {
+          type: 'bar',
+          data: histogram.counts.map((value, index) => {
+            const min = histogram.bin_edges[index]
+            const max = histogram.bin_edges[index + 1]
+            const isSelected = selected && selected.min === min && selected.max === max
+            return {
+              value,
+              itemStyle: {
+                color: isSelected
+                  ? '#f3d493'
+                  : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                      { offset: 0, color: 'rgba(217,169,76,0.9)' },
+                      { offset: 1, color: 'rgba(140,106,42,0.35)' },
+                    ]),
+                borderRadius: [2, 2, 0, 0],
+              },
+            }
+          }),
+          barMaxWidth: 26,
+          cursor: 'pointer',
+        },
+      ],
+    },
+    true
+  )
 }
 
 function handleResize() {
@@ -75,6 +127,8 @@ async function loadList() {
       split: filters.value.split,
       label: filters.value.label,
       keyword: filters.value.keyword.trim(),
+      min_words: wordRange.value ? wordRange.value.min : 0,
+      max_words: wordRange.value ? wordRange.value.max : 0,
       page: page.value,
       page_size: pageSize,
     })
@@ -84,6 +138,13 @@ async function loadList() {
   } finally {
     listLoading.value = false
   }
+}
+
+function clearRange() {
+  wordRange.value = null
+  page.value = 1
+  loadList()
+  renderChart()
 }
 
 function applyFilters() {
@@ -153,11 +214,15 @@ watch(page, () => loadList())
 
       <div class="grid grid-2">
         <div class="panel">
-          <h3>长度分布<span class="hint">训练集，按词统计</span></h3>
+          <h3>长度分布<span class="hint">训练集，按词统计 · 点击柱子联动筛选下方列表</span></h3>
           <div ref="chartEl" class="chart"></div>
           <p class="small muted" style="margin: 6px 0 0">
             长度口径：{{ stats.length_unit.definition }}。
             中位数 {{ trainLength?.median }} 词，最长 {{ trainLength?.max }} 词。
+            <template v-if="wordRange">
+              当前筛选区间 <strong>{{ wordRange.min }}–{{ wordRange.max }} 词</strong>。
+            </template>
+            <template v-else>柱子对应的是真实的分箱统计，不是示意图。</template>
           </p>
         </div>
 
@@ -215,6 +280,10 @@ watch(page, () => loadList())
           @keyup.enter="applyFilters"
         />
         <button @click="applyFilters">筛选</button>
+        <span v-if="wordRange" class="range-chip">
+          长度 {{ wordRange.min }}–{{ wordRange.max }} 词
+          <button title="清除长度区间" @click="clearRange">×</button>
+        </span>
       </div>
 
       <div v-if="listError" class="alert error">{{ listError }}</div>

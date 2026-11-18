@@ -1,6 +1,10 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from '../api'
+import { highlightSegments } from '../text'
+
+const route = useRoute()
 
 const query = ref('')
 const loading = ref(false)
@@ -10,6 +14,16 @@ const presets = ref([])
 const expanded = ref(new Set())
 
 const MAX_CHARS = 5000
+
+// 命中高亮纯粹是词面重合，用来说明「为什么这条排得靠前」，
+// 与余弦相似度是两套口径：相似度高不等于词面重合多，反之亦然。
+const highlighted = computed(() => {
+  if (!result.value) return []
+  return result.value.results.map((item) => ({
+    ...item,
+    ...highlightSegments(item.text, result.value.query),
+  }))
+})
 
 async function loadPresets() {
   try {
@@ -57,7 +71,15 @@ function toggle(id) {
   expanded.value = next
 }
 
-onMounted(loadPresets)
+onMounted(() => {
+  loadPresets()
+  // 支持可分享链接：#/search?q=... 只带查询词，检索仍由后端实时计算
+  const shared = route.query.q
+  if (typeof shared === 'string' && shared.trim()) {
+    query.value = shared
+    runSearch()
+  }
+})
 </script>
 
 <template>
@@ -107,7 +129,7 @@ onMounted(loadPresets)
       <div class="alert info">{{ result.note }}</div>
 
       <div
-        v-for="item in result.results"
+        v-for="item in highlighted"
         :key="item.sample_id"
         class="stat"
         style="margin-bottom: 10px"
@@ -121,7 +143,9 @@ onMounted(loadPresets)
           <span class="small muted">{{ item.word_len }} 词</span>
           <div class="grow"></div>
           <span class="small muted">余弦相似度</span>
-          <span class="mono" style="font-weight: 600">{{ item.similarity.toFixed(4) }}</span>
+          <span class="mono" style="font-weight: 600; color: var(--gold-bright)">
+            {{ item.similarity.toFixed(4) }}
+          </span>
         </div>
 
         <div class="bar" style="margin: 8px 0 10px">
@@ -129,14 +153,32 @@ onMounted(loadPresets)
         </div>
 
         <div class="review-text" :class="{ expanded: expanded.has(item.sample_id) }">
-          {{ item.text }}
+          <template v-for="(segment, index) in item.segments" :key="index">
+            <span v-if="segment.hit" class="hit">{{ segment.text }}</span>
+            <template v-else>{{ segment.text }}</template>
+          </template>
         </div>
-        <button class="link-button" @click="toggle(item.sample_id)">
-          {{ expanded.has(item.sample_id) ? '收起全文' : '查看完整影评' }}
-        </button>
+
+        <div
+          style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px"
+        >
+          <button class="link-button" @click="toggle(item.sample_id)">
+            {{ expanded.has(item.sample_id) ? '收起全文' : '查看完整影评' }}
+          </button>
+          <span v-if="item.hits.length" class="small muted">
+            · 与查询词面重合 {{ item.hits.length }} 个：{{ item.hits.join('、') }}
+          </span>
+          <span v-else class="small muted">
+            · 与查询没有词面重合，这条是被语义相似度召回的上位概念影评
+          </span>
+        </div>
       </div>
 
       <p class="small muted">{{ result.label_note }}</p>
+      <p class="small muted" style="margin-top: 4px">
+        高亮由前端统计词面重合得到，只用于解释排序线索；排序本身由后端余弦相似度决定，
+        两者不是同一件事。
+      </p>
     </div>
   </div>
 </template>
