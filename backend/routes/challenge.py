@@ -69,7 +69,12 @@ def challenge(payload: ChallengeRequest) -> dict:
             "original": left[key],
             "rewritten": right[key],
             "changed": changed,
-            "delta_score": round(right[key]["score"] - left[key]["score"], 6),
+            # 变化量统一按「正面类分数」计算：否则标签翻转时是在拿两个不同的类别分数相减，
+            # 数值没有可比性（任务书要求区分分类分数与概率，这里也一样要口径一致）。
+            "delta_score": round(
+                right[key]["scores"]["positive"] - left[key]["scores"]["positive"], 6
+            ),
+            "delta_basis": "正面类分数之差（改写句 − 原句）",
             "judgement": _judge(preset["expected_change"] if preset else None, changed),
         }
 

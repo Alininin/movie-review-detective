@@ -272,7 +272,54 @@ def main() -> int:
         status, _ = request("DELETE", f"{base}/api/history/99999999")
         check("删除不存在的记录返回 404", status == 404, f"状态码 {status}")
 
-        section("[10] 前端页面托管")
+        section("[10] 任务书之外的扩展接口")
+        status, explanation = request("POST", f"{base}/api/explain", {"text": sample, "top_n": 8})
+        terms = (explanation or {}).get("terms", []) if isinstance(explanation, dict) else []
+        check("POST /api/explain 返回 200", status == 200, f"状态码 {status}")
+        check("返回真实词贡献（不是空列表）", len(terms) > 0, f"{len(terms)} 个词")
+        if terms:
+            check("每个词都带 token / 贡献值 / 方向",
+                  all({"token", "contribution", "direction"} <= set(t) for t in terms),
+                  str(terms[0]))
+            check("方向只有正面 / 负面两种",
+                  all(t["direction"] in ("positive", "negative") for t in terms))
+            check("口径说明里写明不是概率", "概率" in (explanation or {}).get("note", ""))
+        status, err = request("POST", f"{base}/api/explain", {"text": "  "})
+        check("空输入的解释请求返回 400", status == 400, f"状态码 {status}")
+
+        status, diverge = request("GET", f"{base}/api/divergence?limit=3")
+        items = (diverge or {}).get("items", []) if isinstance(diverge, dict) else []
+        check("GET /api/divergence 返回 200", status == 200, f"状态码 {status}")
+        check("分歧样本总数与一致率对得上（200 条中 38 条不一致）",
+              isinstance(diverge, dict) and diverge.get("all_total") == 38,
+              str((diverge or {}).get("all_total") if isinstance(diverge, dict) else status))
+        check("两方胜场数之和等于分歧总数",
+              isinstance(diverge, dict)
+              and diverge.get("tfidf_wins", 0) + diverge.get("distilbert_wins", 0) == 38,
+              f"tfidf_wins={(diverge or {}).get('tfidf_wins') if isinstance(diverge, dict) else '?'} "
+              f"distilbert_wins={(diverge or {}).get('distilbert_wins') if isinstance(diverge, dict) else '?'}")
+        check("每条都带原文与真实标签",
+              all({"text", "true_label", "tfidf_label", "distilbert_label"} <= set(i) for i in items))
+        status, only_hf = request("GET", f"{base}/api/divergence?limit=5&winner=distilbert")
+        only_items = (only_hf or {}).get("items", []) if isinstance(only_hf, dict) else []
+        check("按「DistilBERT 判对」筛选后，条目确实都是 DistilBERT 对",
+              all(i["distilbert_correct"] and not i["tfidf_correct"] for i in only_items),
+              str([(i["sample_id"], i["distilbert_correct"], i["tfidf_correct"]) for i in only_items]))
+
+        status, ranged = request("GET", f"{base}/api/reviews?min_words=100&max_words=150&page_size=20")
+        ranged_items = (ranged or {}).get("items", []) if isinstance(ranged, dict) else []
+        check("长度区间筛选返回 200", status == 200, f"状态码 {status}")
+        check("区间筛选结果都落在 [100, 150) 词内",
+              bool(ranged_items) and all(100 <= i["word_len"] < 150 for i in ranged_items),
+              str([i["word_len"] for i in ranged_items]))
+        status, bad_range = request("GET", f"{base}/api/reviews?min_words=150&max_words=100")
+        check("区间上下限颠倒返回 400", status == 400, f"状态码 {status}")
+
+        status, exp2 = request("GET", f"{base}/api/experiments")
+        artifact_url = ((exp2 or {}).get("artifacts", {}) or {}).get("confusion_matrix_url", "")
+        check("混淆矩阵地址带版本号（避免浏览器缓存旧图）", "?v=" in artifact_url, str(artifact_url))
+
+        section("[11] 前端页面托管")
         status, html = request("GET", f"{base}/")
         check("首页返回 200", status == 200, f"状态码 {status}")
         check("首页是前端构建产物（含挂载点）",

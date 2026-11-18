@@ -25,6 +25,11 @@ class ChallengeRequest(BaseModel):
     rewritten: str = Field(default="", description="改写句（英文）")
 
 
+class ExplainRequest(BaseModel):
+    text: str = Field(default="", description="英文影评文本")
+    top_n: int = Field(default=12, ge=3, le=30, description="返回多少个贡献最大的词")
+
+
 def validate_text(raw: str, field_label: str = "文本") -> str:
     """统一校验：空输入与超长输入。返回清洗后的文本，失败抛 ValueError。"""
     text = clean_user_input(raw)

@@ -124,7 +124,12 @@ def compute_metrics(y_true: list[int], y_pred: list[int]) -> dict:
     }
 
 
-def plot_confusion(results: dict, path: Path) -> None:
+def plot_confusion(results: dict, path: Path, dark: bool = False) -> None:
+    """画混淆矩阵。
+
+    dark=False 输出白底图（放进课程报告，打印与 Word 里更清楚）；
+    dark=True  输出深色图（给网页用，和「胶片放映厅」的界面配色一致）。
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -135,22 +140,85 @@ def plot_confusion(results: dict, path: Path) -> None:
     plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "Noto Sans CJK SC", "DejaVu Sans"]
     plt.rcParams["axes.unicode_minus"] = False
 
+    if dark:
+        # 深色版用「暗褐 → 暖金」的渐变，避免白底格子在暗色界面上刺眼
+        from matplotlib.colors import LinearSegmentedColormap
+
+        bg = "#131110"
+        ink = "#f4eee2"
+        muted = "#948a79"
+        cmap = LinearSegmentedColormap.from_list(
+            "film_gold", ["#17130f", "#4a3a1e", "#a8802f", "#f3d493"]
+        )
+    else:
+        bg = None
+        ink = "#111827"
+        muted = "#4b5563"
+        cmap = "Blues"
+
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.8), dpi=150)
+    if dark:
+        fig.patch.set_facecolor(bg)
     for ax, key in zip(axes, ["tfidf", "distilbert"]):
         matrix = np.array(results[key]["metrics"]["confusion_matrix"])
-        image = ax.imshow(matrix, cmap="Blues")
-        ax.set_title(f"{results[key]['display_name']}\nAcc={results[key]['metrics']['accuracy']:.4f}  Macro-F1={results[key]['metrics']['macro_f1']:.4f}")
+        image = ax.imshow(matrix, cmap=cmap)
+        ax.set_title(
+            f"{results[key]['display_name']}\n"
+            f"Acc={results[key]['metrics']['accuracy']:.4f}  "
+            f"Macro-F1={results[key]['metrics']['macro_f1']:.4f}",
+            color=ink,
+        )
         ax.set_xticks([0, 1], [f"预测负面", f"预测正面"])
         ax.set_yticks([0, 1], [f"真实负面", f"真实正面"])
+        if dark:
+            ax.set_facecolor(bg)
+            ax.tick_params(colors=muted)
+            for spine in ax.spines.values():
+                spine.set_color("#3a3128")
+        maximum = float(matrix.max()) if matrix.size and matrix.max() else 1.0
         for i in range(2):
             for j in range(2):
+                ratio = float(matrix[i, j]) / maximum
+                if dark:
+                    # 格子越亮，字越深，保证每个数字都看得清
+                    text_color = "#1b1206" if ratio > 0.55 else ink
+                else:
+                    text_color = "white" if ratio > 0.5 else "black"
                 ax.text(j, i, str(matrix[i, j]), ha="center", va="center",
-                        color="white" if matrix[i, j] > matrix.max() / 2 else "black", fontsize=13)
-        fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
-    fig.suptitle("测试集混淆矩阵（200 条，CPU 推理）", fontsize=12)
+                        color=text_color, fontsize=13)
+        colorbar = fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
+        if dark:
+            colorbar.ax.tick_params(colors=muted)
+            colorbar.outline.set_edgecolor("#3a3128")
+    fig.suptitle("测试集混淆矩阵（200 条，CPU 推理）", fontsize=12, color=ink if dark else "black")
     fig.tight_layout()
-    fig.savefig(path, bbox_inches="tight")
+    fig.savefig(path, bbox_inches="tight", facecolor=bg if dark else "white")
     plt.close(fig)
+
+
+def replot_from_metrics() -> None:
+    """只重画混淆矩阵，不重新跑模型、不改动 metrics.json。
+
+    用途：改了配色之后重新生成图片，指标文件保持原样（避免「为了好看而重跑评测」）。
+    """
+    import json
+
+    metrics = json.loads((config.EXPERIMENTS_DIR / "metrics.json").read_text(encoding="utf-8"))
+    results = {
+        key: {
+            "display_name": metrics["models"][key]["display_name"],
+            "metrics": {
+                "confusion_matrix": metrics["models"][key]["confusion_matrix"],
+                "accuracy": metrics["models"][key]["accuracy"],
+                "macro_f1": metrics["models"][key]["macro_f1"],
+            },
+        }
+        for key in ("tfidf", "distilbert")
+    }
+    plot_confusion(results, config.EXPERIMENTS_DIR / "confusion_matrix.png")
+    plot_confusion(results, config.EXPERIMENTS_DIR / "confusion_matrix_dark.png", dark=True)
+    print("已重画混淆矩阵：experiments/confusion_matrix.png（报告用）、"
+          "experiments/confusion_matrix_dark.png（网页用）")
 
 
 def main() -> None:
@@ -279,6 +347,7 @@ def main() -> None:
             ])
 
     plot_confusion(results, config.EXPERIMENTS_DIR / "confusion_matrix.png")
+    plot_confusion(results, config.EXPERIMENTS_DIR / "confusion_matrix_dark.png", dark=True)
 
     # ---- 错误样本清单（供人工写分析）----
     lines = [
@@ -338,4 +407,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if "--replot" in sys.argv:
+        # 只重画图片（改配色时用），不重新推理、不改 metrics.json
+        replot_from_metrics()
+    else:
+        main()

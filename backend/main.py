@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend import db
 from backend.artifacts import artifacts
-from backend.routes import challenge, dataset, experiments, predict, search
+from backend.routes import challenge, dataset, experiments, insight, predict, search
 from common import config
 
 logging.basicConfig(
@@ -91,6 +91,7 @@ app.include_router(predict.router)
 app.include_router(search.router)
 app.include_router(challenge.router)
 app.include_router(experiments.router)
+app.include_router(insight.router)
 
 
 @app.get("/api/health", tags=["系统"], summary="模型与资源就绪状态")
@@ -126,12 +127,29 @@ else:
         return HTMLResponse(MISSING_FRONTEND_HTML, status_code=200)
 
 
+def _lan_ip() -> str | None:
+    """探测本机内网地址，用于 HOST=0.0.0.0 时提示「同网段的人用哪个地址访问」。"""
+    import socket
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("8.8.8.8", 80))  # 不发包，只让系统选一张网卡
+            return probe.getsockname()[0]
+    except OSError:
+        return None
+
+
 def main() -> None:
     import uvicorn
 
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "8000"))
     log.info("服务地址 http://%s:%s  （接口文档 /docs）", host, port)
+    if host == "0.0.0.0":
+        lan = _lan_ip()
+        if lan:
+            log.info("已对局域网开放：http://%s:%s  （同一 WiFi 下的设备可直接打开）", lan, port)
+        log.info("首次监听非本机地址时 Windows 可能弹出防火墙提示，允许访问局域网即可")
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 

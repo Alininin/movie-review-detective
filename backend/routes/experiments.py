@@ -19,7 +19,9 @@ EXPERIMENT_FILES = {
     "embedding_build": config.EXPERIMENTS_DIR / "embedding_build.json",
     "error_cases": config.EXPERIMENTS_DIR / "error_cases.md",
     "error_cases_auto": config.EXPERIMENTS_DIR / "error_cases_auto.md",
-    "confusion_matrix": config.EXPERIMENTS_DIR / "confusion_matrix.png",
+    # 网页用深色版（配色与界面一致）；报告里用白底版 confusion_matrix.png
+    "confusion_matrix": config.EXPERIMENTS_DIR / "confusion_matrix_dark.png",
+    "confusion_matrix_report": config.EXPERIMENTS_DIR / "confusion_matrix.png",
 }
 
 
@@ -43,13 +45,17 @@ def experiments() -> dict:
     if EXPERIMENT_FILES["error_cases"].exists():
         error_text = EXPERIMENT_FILES["error_cases"].read_text(encoding="utf-8")
 
+    # 图片地址带上文件修改时间：重新生成混淆矩阵后，浏览器不会继续显示缓存里的旧图
+    matrix_path = EXPERIMENT_FILES["confusion_matrix"]
+    version = int(matrix_path.stat().st_mtime) if matrix_path.exists() else 0
+
     return {
         "metrics": read_json(EXPERIMENT_FILES["metrics"]),
         "retrieval": read_json(EXPERIMENT_FILES["retrieval"]),
         "embedding_build": read_json(EXPERIMENT_FILES["embedding_build"]),
         "error_cases_markdown": error_text,
         "artifacts": {
-            "confusion_matrix_url": "/api/experiments/confusion-matrix.png",
+            "confusion_matrix_url": f"/api/experiments/confusion-matrix.png?v={version}",
             "predictions_csv": "experiments/predictions_test.csv",
             "retrieval_check_csv": "experiments/retrieval_check.csv",
         },

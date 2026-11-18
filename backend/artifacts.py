@@ -54,6 +54,54 @@ class TfidfSentiment:
             "elapsed_ms": round(elapsed_ms, 3),
         }
 
+    def explain(self, text: str, top_n: int = 12) -> dict[str, Any]:
+        """解释这个线性模型为什么给出这个判断。
+
+        做法完全是模型自身的算术，不是事后编的理由：
+          * 用训练好的 TfidfVectorizer 把输入变成稀疏向量；
+          * 逻辑回归的每个特征权重 coef_[0] 表示「该词出现时把结果往正面推多少」；
+          * 两者的乘积就是该词对这条样本的**贡献值**，按绝对值排序取前 top_n 个。
+
+        贡献值为正 = 推向正面，为负 = 推向负面；它是权重与词频的乘积，
+        不是概率，也不能跨样本直接比较大小。
+        """
+        import numpy as np
+
+        vectorizer = self.pipeline.named_steps["tfidf"]
+        classifier = self.pipeline.named_steps["classifier"]
+        matrix = vectorizer.transform([text]).tocoo()
+        feature_names = vectorizer.get_feature_names_out()
+        coef = classifier.coef_[0]
+
+        contributions = np.asarray(matrix.data, dtype=float) * coef[matrix.col]
+        order = np.argsort(-np.abs(contributions))[: max(1, top_n)]
+
+        terms = []
+        for position in order:
+            index = int(matrix.col[position])
+            contribution = float(contributions[position])
+            terms.append(
+                {
+                    "token": str(feature_names[index]),
+                    "tfidf": round(float(matrix.data[position]), 6),
+                    "weight": round(float(coef[index]), 6),
+                    "contribution": round(contribution, 6),
+                    "direction": "positive" if contribution > 0 else "negative",
+                }
+            )
+
+        return {
+            "terms": terms,
+            "intercept": round(float(classifier.intercept_[0]), 6),
+            "known_tokens": int(matrix.nnz),
+            "input_tokens": len(text.split()),
+            "note": (
+                "以上是 TF-IDF + 逻辑回归的线性贡献值：正数把结果推向正面，负数推向负面，"
+                "数值是「TF-IDF 权重 × 回归系数」的乘积，不是概率，也不能跨样本直接比大小。"
+                "DistilBERT 是黑盒分类器，本项目不对它做词级归因。"
+            ),
+        }
+
 
 class HFSentiment:
     """预训练模型：DistilBERT SST-2。显式 CPU 推理，标签映射到 0/1。"""
@@ -206,6 +254,9 @@ class Artifacts:
         self.challenge_pairs: list[dict] = []
         self.retrieval_queries: list[dict] = []
         self.experiments: dict[str, Any] = {}
+        # 测试集逐条预测与「两模型分歧」样本（离线脚本产出，网页只读）
+        self.predictions: list[dict] = []
+        self.divergence: list[dict] = []
 
         self.tfidf: TfidfSentiment | None = None
         self.hf: HFSentiment | None = None
@@ -268,6 +319,32 @@ class Artifacts:
             )
         except Exception:  # noqa: BLE001
             self.experiments = {}
+
+        # 测试集逐条预测：用于「分歧样本浏览器」。文本从 reviews.csv 按 sample_id 取回，
+        # 这样页面展示的就是同一条影评，不需要另存一份语料。
+        try:
+            rows = _read_csv(config.EXPERIMENTS_DIR / "predictions_test.csv")
+            text_by_id = {row["sample_id"]: row["text"] for row in self.reviews}
+            items = [
+                {
+                    "sample_id": row["sample_id"],
+                    "true_label": int(row["true_label"]),
+                    "tfidf_label": int(row["tfidf_label"]),
+                    "tfidf_score": float(row["tfidf_score"]),
+                    "distilbert_label": int(row["distilbert_label"]),
+                    "distilbert_score": float(row["distilbert_score"]),
+                    "word_len": int(row["word_len"]) if row.get("word_len") else None,
+                    "text": text_by_id.get(row["sample_id"], ""),
+                }
+                for row in rows
+            ]
+            self.predictions = items
+            self.divergence = [
+                item for item in items if item["tfidf_label"] != item["distilbert_label"]
+            ]
+        except Exception as exc:  # noqa: BLE001
+            log.error("读取逐条预测失败：%s", exc)
+            self.predictions, self.divergence = [], []
 
     def _load_models(self) -> None:
         import numpy as np
