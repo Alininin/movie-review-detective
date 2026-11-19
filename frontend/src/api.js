@@ -55,7 +55,7 @@ export const api = {
   challengePresets: () => request('/api/challenge/presets'),
   challenge: (original, rewritten) => postJSON('/api/challenge', { original, rewritten }),
 
-  experiments: () => request('/api/experiments'),
+  experiments: (theme = 'dark') => request(`/api/experiments?theme=${theme}`),
   divergence: (limit = 5, offset = 0, winner = 'all') =>
     request(`/api/divergence?limit=${limit}&offset=${offset}&winner=${winner}`),
   history: (limit = 20, offset = 0) => request(`/api/history?limit=${limit}&offset=${offset}`),

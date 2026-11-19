@@ -1,8 +1,12 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import Icon from './components/Icon.vue'
 import { api } from './api'
+import { useTheme } from './theme'
 
-// 后端就绪状态：顶部状态灯 + 页脚说明都来自真实的 /api/health
+const { resolved, toggleTheme } = useTheme()
+
+// 后端就绪状态：顶部胶囊灯 + 文案都来自真实的 /api/health
 const health = ref(null)
 const healthError = ref('')
 
@@ -10,18 +14,9 @@ onMounted(async () => {
   try {
     health.value = await api.health()
   } catch (error) {
-    // /api/health 在未就绪时返回 503，这里仍要展示细节
     healthError.value = error.message
   }
 })
-
-const navItems = [
-  { to: '/library', title: '影评资料库', sub: '样本统计 · 分页筛选' },
-  { to: '/analyze', title: '情感分析', sub: '双模型 · 词贡献 · CSV 批量' },
-  { to: '/search', title: '相似影评搜索', sub: 'MiniLM 向量 · Top-5' },
-  { to: '/challenge', title: '模型挑战', sub: '否定 · 转折 · 改写' },
-  { to: '/lab', title: '实验与历史', sub: '指标 · 分歧 · 历史' },
-]
 
 const statusClass = computed(() => {
   if (health.value?.ready) return 'ok'
@@ -30,52 +25,85 @@ const statusClass = computed(() => {
 })
 
 const statusText = computed(() => {
-  if (health.value?.ready) return '模型已就绪 · CPU 推理'
+  if (health.value?.ready) return '模型就绪'
   if (health.value) return '部分组件未就绪'
   if (healthError.value) return '后端未连接'
-  return '正在连接后端…'
+  return '连接中'
 })
+
+const navItems = [
+  { to: '/library', title: '资料库', icon: 'film' },
+  { to: '/analyze', title: '情感分析', icon: 'spark' },
+  { to: '/search', title: '相似检索', icon: 'search' },
+  { to: '/challenge', title: '模型挑战', icon: 'duel' },
+  { to: '/lab', title: '实验台', icon: 'chart' },
+]
 </script>
 
 <template>
-  <div class="shell">
-    <header class="masthead">
-      <div class="masthead-inner">
-        <div class="brand">
-          <div class="title-row">
-            <h1>影评侦探</h1>
-            <span class="reel">REEL 01 / 2026</span>
-          </div>
-          <p>基于 Hugging Face 的情感分析与相似影评检索</p>
-        </div>
+  <div class="app">
+    <!-- 环境光：四团缓慢漂移的色斑，是玻璃材质的“背光” -->
+    <div class="ambient" aria-hidden="true">
+      <span class="blob b1"></span>
+      <span class="blob b2"></span>
+      <span class="blob b3"></span>
+      <span class="blob b4"></span>
+    </div>
+
+    <div class="topbar-wrap">
+      <header class="topbar glass">
+        <RouterLink to="/library" class="brand">
+          <span class="brand-mark"><Icon name="film" :size="19" /></span>
+          <span class="brand-text">
+            <b>影评侦探</b>
+            <span>Reel Detective</span>
+          </span>
+        </RouterLink>
 
         <nav class="nav">
           <RouterLink
-            v-for="(item, index) in navItems"
+            v-for="item in navItems"
             :key="item.to"
             :to="item.to"
-            class="nav-item"
+            class="navlink"
             active-class="active"
           >
-            <span class="idx">{{ String(index + 1).padStart(2, '0') }}</span>
+            <Icon :name="item.icon" :size="15" />
             {{ item.title }}
           </RouterLink>
         </nav>
 
-        <div class="status-pill" :class="statusClass">
-          <span class="dot"></span>
-          {{ statusText }}
-        </div>
-      </div>
-    </header>
+        <div class="topbar-tools">
+          <span class="status" :class="statusClass" :title="healthError || ''">
+            <span class="dot"></span>
+            {{ statusText }}
+          </span>
 
-    <main class="main">
+          <button
+            class="theme-switch"
+            type="button"
+            :aria-label="resolved === 'dark' ? '切换到白天模式' : '切换到夜间模式'"
+            :title="resolved === 'dark' ? '切换到白天模式' : '切换到夜间模式'"
+            @click="toggleTheme"
+          >
+            <span class="ghost">
+              <Icon :name="resolved === 'dark' ? 'sun' : 'moon'" :size="12" />
+            </span>
+            <span class="knob">
+              <Icon :name="resolved === 'dark' ? 'moon' : 'sun'" :size="14" />
+            </span>
+          </button>
+        </div>
+      </header>
+    </div>
+
+    <main class="page">
       <RouterView />
     </main>
 
-    <footer class="credits">
-      <strong>影评侦探</strong> · 自然语言处理与应用课程设计 · 数据与模型来自 Hugging Face 公开资源 ·
-      本地 CPU 推理 · MIT License
+    <footer class="footer">
+      <span>影评侦探 · 自然语言处理与应用课程设计</span>
+      <span>数据与模型来自 Hugging Face · 本地 CPU 推理 · MIT</span>
     </footer>
   </div>
 </template>
