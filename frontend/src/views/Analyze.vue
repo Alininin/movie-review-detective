@@ -160,7 +160,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <header class="hero">
+    <header class="hero" data-index="02">
       <div>
         <div class="kicker">02 · 情感分析</div>
         <h1 class="title">两个模型，一起看一段影评</h1>

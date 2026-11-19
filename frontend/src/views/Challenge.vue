@@ -94,7 +94,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <header class="hero">
+    <header class="hero" data-index="04">
       <div>
         <div class="kicker">04 · 模型挑战</div>
         <h1 class="title">改一个词，看模型会不会被骗</h1>

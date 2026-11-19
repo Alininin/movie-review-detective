@@ -130,7 +130,7 @@ watch(resolved, () => loadExperiments())
 
 <template>
   <div>
-    <header class="hero">
+    <header class="hero" data-index="05">
       <div>
         <div class="kicker">05 · 实验台</div>
         <h1 class="title">数字都在这里</h1>

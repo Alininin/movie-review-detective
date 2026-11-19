@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import Icon from './components/Icon.vue'
 import { api } from './api'
 import { useTheme } from './theme'
@@ -10,13 +10,41 @@ const { resolved, toggleTheme } = useTheme()
 const health = ref(null)
 const healthError = ref('')
 
+// 玻璃面板的跟随高光：只更新鼠标所在的那一块，避免每帧回调里到处写样式
+function onPointerMove(event) {
+  const target = event.target instanceof Element ? event.target.closest('.glass') : null
+  if (!target) return
+  const rect = target.getBoundingClientRect()
+  target.style.setProperty('--mx', `${event.clientX - rect.left}px`)
+  target.style.setProperty('--my', `${event.clientY - rect.top}px`)
+}
+
 onMounted(async () => {
+  window.addEventListener('pointermove', onPointerMove, { passive: true })
   try {
     health.value = await api.health()
   } catch (error) {
     healthError.value = error.message
   }
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pointermove', onPointerMove)
+})
+
+// 切主题：支持的浏览器用 View Transitions 从开关位置圆形擦除，不支持的直接切
+function onToggleTheme(event) {
+  const rect = event.currentTarget.getBoundingClientRect()
+  const root = document.documentElement
+  root.style.setProperty('--vt-x', `${rect.left + rect.width / 2}px`)
+  root.style.setProperty('--vt-y', `${rect.top + rect.height / 2}px`)
+
+  if (typeof document.startViewTransition === 'function') {
+    document.startViewTransition(() => toggleTheme())
+  } else {
+    toggleTheme()
+  }
+}
 
 const statusClass = computed(() => {
   if (health.value?.ready) return 'ok'
@@ -84,7 +112,7 @@ const navItems = [
             type="button"
             :aria-label="resolved === 'dark' ? '切换到白天模式' : '切换到夜间模式'"
             :title="resolved === 'dark' ? '切换到白天模式' : '切换到夜间模式'"
-            @click="toggleTheme"
+            @click="onToggleTheme"
           >
             <span class="ghost">
               <Icon :name="resolved === 'dark' ? 'sun' : 'moon'" :size="12" />

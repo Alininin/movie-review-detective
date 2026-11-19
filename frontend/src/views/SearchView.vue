@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api'
+import CountUp from '../components/CountUp.vue'
 import Icon from '../components/Icon.vue'
 import { highlightSegments } from '../text'
 
@@ -88,7 +89,7 @@ onMounted(() => {
 
 <template>
   <div>
-    <header class="hero">
+    <header class="hero" data-index="03">
       <div>
         <div class="kicker">03 · 相似检索</div>
         <h1 class="title">找到观点相近的影评</h1>
@@ -149,11 +150,12 @@ onMounted(() => {
                   r="26"
                   fill="none"
                   stroke-width="5"
+                  :style="{ '--circ': CIRCUMFERENCE.toFixed(2) }"
                   :stroke-dasharray="CIRCUMFERENCE.toFixed(2)"
                   :stroke-dashoffset="ringOffset(item.similarity)"
                 />
               </svg>
-              <span class="num">{{ item.similarity.toFixed(2) }}</span>
+              <span class="num"><CountUp :value="item.similarity" :decimals="2" :duration="700" /></span>
             </div>
 
             <div style="flex: 1; min-width: 0">

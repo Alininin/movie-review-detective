@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import { api } from '../api'
+import CountUp from '../components/CountUp.vue'
 import Icon from '../components/Icon.vue'
 import { useTheme } from '../theme'
 
@@ -196,7 +197,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div>
-    <header class="hero">
+    <header class="hero" data-index="01">
       <div>
         <div class="kicker">01 · 数据集</div>
         <h1 class="title">影评资料库</h1>
@@ -212,24 +213,28 @@ onBeforeUnmount(() => {
 
     <template v-if="stats">
       <section class="tiles">
-        <div class="tile glass">
+        <div class="tile glass featured">
           <div class="tile-label">样本总数</div>
-          <div class="tile-value">{{ totals.reviews }}<em>条</em></div>
+          <div class="tile-value"><CountUp :value="totals.reviews ?? 0" /><em>条</em></div>
           <div class="tile-foot">训练 + 测试，去重后</div>
         </div>
         <div class="tile glass">
           <div class="tile-label">训练 / 测试</div>
-          <div class="tile-value">{{ totals.train }}<em>/ {{ totals.test }}</em></div>
+          <div class="tile-value">
+            <CountUp :value="totals.train ?? 0" /><em>/ <CountUp :value="totals.test ?? 0" /></em>
+          </div>
           <div class="tile-foot">正负各半，固定种子</div>
         </div>
         <div class="tile glass">
           <div class="tile-label">检索库</div>
-          <div class="tile-value">{{ totals.retrieval_pool }}<em>条</em></div>
+          <div class="tile-value"><CountUp :value="totals.retrieval_pool ?? 0" /><em>条</em></div>
           <div class="tile-foot">已预生成向量</div>
         </div>
         <div class="tile glass">
           <div class="tile-label">训练集平均长度</div>
-          <div class="tile-value">{{ trainLength?.mean ?? '—' }}<em>词</em></div>
+          <div class="tile-value">
+            <CountUp :value="trainLength?.mean ?? 0" :decimals="2" /><em>词</em>
+          </div>
           <div class="tile-foot">中位数 {{ trainLength?.median }} · 最长 {{ trainLength?.max }}</div>
         </div>
       </section>

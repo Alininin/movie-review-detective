@@ -30,28 +30,28 @@ html[data-theme='dark'] {
   --bg-soft: #0d1017;
   --text: #edf1f7;
   --text-soft: #c8d0db;
-  --muted: #96a1b0;
+  --muted: #a3aebd;
 
-  --accent: #ff9d6b;
-  --accent-2: #ffc978;
-  --accent-ink: #201008;
-  --pos: #5fd3a3;
-  --neg: #ff7f72;
+  --accent: #4953dd;
+  --accent-2: #3285b6;
+  --accent-ink: #f2f5ff;
+  --pos: #3ddbb4;
+  --neg: #fb7185;
 
-  --glass: rgba(255, 255, 255, 0.055);
-  --glass-2: rgba(255, 255, 255, 0.09);
-  --glass-3: rgba(255, 255, 255, 0.13);
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.22);
+  --glass: rgba(255, 255, 255, 0.07);
+  --glass-2: rgba(255, 255, 255, 0.11);
+  --glass-3: rgba(255, 255, 255, 0.15);
+  --border: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.25);
   --sheen: rgba(255, 255, 255, 0.3);
   --shadow: 0 30px 70px -40px rgba(0, 0, 0, 0.95), 0 2px 10px -6px rgba(0, 0, 0, 0.7);
   --shadow-lift: 0 40px 90px -44px rgba(0, 0, 0, 1);
   --inset: inset 0 1px 0 rgba(255, 255, 255, 0.22);
 
-  --blob-1: rgba(255, 122, 89, 0.55);
-  --blob-2: rgba(255, 190, 92, 0.42);
+  --blob-1: rgba(38, 88, 197, 0.62);
+  --blob-2: rgba(50, 133, 182, 0.5);
   --blob-3: rgba(108, 130, 255, 0.42);
-  --blob-4: rgba(64, 220, 178, 0.3);
+  --blob-4: rgba(34, 211, 238, 0.34);
   --blob-opacity: 0.6;
   --grid-line: rgba(255, 255, 255, 0.035);
 }
@@ -65,11 +65,11 @@ html[data-theme='light'] {
   --text-soft: #3a4150;
   --muted: #58616d;
 
-  --accent: #e05c34;
-  --accent-2: #f0a04b;
-  --accent-ink: #fff7f2;
-  --pos: #178a63;
-  --neg: #cf4a37;
+  --accent: #0d8fa6;
+  --accent-2: #17e7dd;
+  --accent-ink: #03242a;
+  --pos: #0d9488;
+  --neg: #e11d48;
 
   --glass: rgba(255, 255, 255, 0.52);
   --glass-2: rgba(255, 255, 255, 0.7);
@@ -81,10 +81,10 @@ html[data-theme='light'] {
   --shadow-lift: 0 40px 80px -40px rgba(31, 38, 52, 0.55);
   --inset: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
-  --blob-1: rgba(236, 106, 71, 0.55);
-  --blob-2: rgba(248, 183, 96, 0.55);
-  --blob-3: rgba(126, 152, 255, 0.42);
-  --blob-4: rgba(88, 205, 190, 0.4);
+  --blob-1: rgba(23, 231, 221, 0.5);
+  --blob-2: rgba(96, 248, 202, 0.42);
+  --blob-3: rgba(139, 194, 245, 0.6);
+  --blob-4: rgba(167, 139, 250, 0.32);
   --blob-opacity: 0.72;
   --grid-line: rgba(25, 29, 36, 0.045);
 }
@@ -637,6 +637,33 @@ html[data-theme='dark'] .theme-switch .ghost {
   margin-top: 10px;
   font-size: 11.5px;
   color: var(--muted);
+}
+
+/* 第一块瓷砖用主色染一下，避免四块一样的方盒子显得板 */
+.tile.featured {
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--accent) 30%, transparent),
+    var(--glass) 62%
+  );
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.tile.featured::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  top: -40px;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent-2) 45%, transparent);
+  filter: blur(34px);
+  pointer-events: none;
+}
+
+.tile.featured .tile-value {
+  color: var(--text);
 }
 
 /* ---------------------------------------------------------------- 按钮 */
@@ -1516,5 +1543,266 @@ details.note-box .note-body {
 
   .tiles {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =========================================================================
+   动效
+   只做三类：跟随指针的高光、一次性的入场编排、状态变化时的过渡。
+   全部使用 transform / opacity / clip-path，不触发布局重排。
+   ========================================================================= */
+
+/* 1) 指向高光：鼠标位置由 App.vue 写进 --mx / --my */
+.glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, 0%),
+    color-mix(in srgb, var(--sheen) 55%, transparent),
+    transparent 68%
+  );
+  opacity: 0;
+  transition: opacity 0.35s var(--ease);
+}
+
+.glass:hover::after {
+  opacity: 1;
+}
+
+/* 2) 入场编排：瓷砖、卡片、列表依次浮起 */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.992);
+  }
+}
+
+.tiles > .tile {
+  animation: rise 0.62s var(--ease) both;
+}
+
+.tiles > .tile:nth-child(1) {
+  animation-delay: 0.02s;
+}
+
+.tiles > .tile:nth-child(2) {
+  animation-delay: 0.09s;
+}
+
+.tiles > .tile:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.tiles > .tile:nth-child(4) {
+  animation-delay: 0.23s;
+}
+
+.tiles > .tile:nth-child(5) {
+  animation-delay: 0.3s;
+}
+
+.list > .item {
+  animation: rise 0.5s var(--ease) both;
+}
+
+.list > .item:nth-child(1) {
+  animation-delay: 0.04s;
+}
+
+.list > .item:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.list > .item:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.list > .item:nth-child(4) {
+  animation-delay: 0.22s;
+}
+
+.list > .item:nth-child(5) {
+  animation-delay: 0.28s;
+}
+
+.list > .item:nth-child(6) {
+  animation-delay: 0.34s;
+}
+
+.list > .item:nth-child(n + 7) {
+  animation-delay: 0.4s;
+}
+
+.model-grid > .model-card {
+  animation: rise 0.55s var(--ease) both;
+}
+
+.model-grid > .model-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+/* 3) 计量条从 0 长出来；圆环从一开始画到目标位置 */
+@keyframes meter-grow {
+  from {
+    width: 0;
+  }
+}
+
+.meter > i {
+  animation: meter-grow 0.95s var(--ease) both;
+}
+
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: var(--circ, 163.36);
+  }
+}
+
+.ring .value {
+  animation: ring-draw 1.05s var(--ease) both;
+}
+
+/* 4) 按钮：悬停扫光、按压缩放、图标微动 */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: -70%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.62), transparent);
+  transform: skewX(-18deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.btn-primary:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: sweep 0.72s var(--ease);
+}
+
+@keyframes sweep {
+  from {
+    left: -70%;
+  }
+
+  to {
+    left: 120%;
+  }
+}
+
+.btn .icon {
+  transition: transform 0.3s var(--ease);
+}
+
+.btn:hover:not(:disabled) .icon {
+  transform: translateX(2px);
+}
+
+.icon-btn:hover:not(:disabled) .icon {
+  transform: rotate(-12deg);
+}
+
+/* 导航选中态：小pill弹一下，别整块闪 */
+.navlink.active {
+  animation: pill-in 0.32s var(--ease);
+}
+
+@keyframes pill-in {
+  from {
+    transform: scale(0.94);
+  }
+}
+
+/* 交互卡片：轻微上浮 */
+.item,
+.model-card {
+  transition: background-color 0.24s, border-color 0.24s, transform 0.28s var(--ease),
+    box-shadow 0.28s var(--ease);
+}
+
+.item:hover,
+.model-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+/* 5) 主题切换：从开关位置向外圆形擦除（View Transitions API，不支持时直接切） */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+  animation: vt-wipe 0.62s var(--ease) both;
+}
+
+@keyframes vt-wipe {
+  from {
+    clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%));
+  }
+
+  to {
+    clip-path: circle(150% at var(--vt-x, 50%) var(--vt-y, 50%));
+  }
+}
+
+/* 6) 页头右侧的巨型编号水印：给版式一点不对称 */
+.hero {
+  position: relative;
+}
+
+.hero::before {
+  content: attr(data-index);
+  position: absolute;
+  right: 0;
+  top: -34px;
+  font-size: clamp(76px, 11vw, 148px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--text) 16%, transparent);
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 760px) {
+  .hero::before {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tiles > .tile,
+  .list > .item,
+  .model-grid > .model-card,
+  .meter > i,
+  .ring .value,
+  .navlink.active,
+  .btn-primary:hover:not(:disabled)::after,
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+  .item:hover,
+  .model-card:hover {
+    transform: none;
   }
 }
