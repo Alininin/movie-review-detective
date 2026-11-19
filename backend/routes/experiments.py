@@ -26,7 +26,7 @@ EXPERIMENT_FILES = {
 
 
 @router.get("/api/experiments", summary="指标、混淆矩阵、案例分析")
-def experiments() -> dict:
+def experiments(theme: str = Query(default="dark", description="dark / light：选混淆矩阵配色")) -> dict:
     import json
 
     if not EXPERIMENT_FILES["metrics"].exists():
@@ -45,8 +45,13 @@ def experiments() -> dict:
     if EXPERIMENT_FILES["error_cases"].exists():
         error_text = EXPERIMENT_FILES["error_cases"].read_text(encoding="utf-8")
 
-    # 图片地址带上文件修改时间：重新生成混淆矩阵后，浏览器不会继续显示缓存里的旧图
-    matrix_path = EXPERIMENT_FILES["confusion_matrix"]
+    # 界面有明暗两套主题，混淆矩阵也备了两版：浅色主题用白底图，深色主题用暗色图。
+    # 地址带上文件修改时间，重新生成图片后浏览器不会继续显示缓存里的旧图。
+    matrix_path = (
+        EXPERIMENT_FILES["confusion_matrix_report"]
+        if theme == "light"
+        else EXPERIMENT_FILES["confusion_matrix"]
+    )
     version = int(matrix_path.stat().st_mtime) if matrix_path.exists() else 0
 
     return {
@@ -55,7 +60,7 @@ def experiments() -> dict:
         "embedding_build": read_json(EXPERIMENT_FILES["embedding_build"]),
         "error_cases_markdown": error_text,
         "artifacts": {
-            "confusion_matrix_url": f"/api/experiments/confusion-matrix.png?v={version}",
+            "confusion_matrix_url": f"/api/experiments/confusion-matrix.png?theme={theme}&v={version}",
             "predictions_csv": "experiments/predictions_test.csv",
             "retrieval_check_csv": "experiments/retrieval_check.csv",
         },
@@ -64,8 +69,12 @@ def experiments() -> dict:
 
 
 @router.get("/api/experiments/confusion-matrix.png", summary="混淆矩阵图片")
-def confusion_matrix_image() -> FileResponse:
-    path = EXPERIMENT_FILES["confusion_matrix"]
+def confusion_matrix_image(theme: str = Query(default="dark")) -> FileResponse:
+    path = (
+        EXPERIMENT_FILES["confusion_matrix_report"]
+        if theme == "light"
+        else EXPERIMENT_FILES["confusion_matrix"]
+    )
     if not path.exists():
         raise HTTPException(status_code=404, detail="混淆矩阵图不存在，请先运行 scripts/04_evaluate.py")
     return FileResponse(path, media_type="image/png", filename="confusion_matrix.png")

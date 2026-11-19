@@ -317,7 +317,10 @@ def main() -> int:
 
         status, exp2 = request("GET", f"{base}/api/experiments")
         artifact_url = ((exp2 or {}).get("artifacts", {}) or {}).get("confusion_matrix_url", "")
-        check("混淆矩阵地址带版本号（避免浏览器缓存旧图）", "?v=" in artifact_url, str(artifact_url))
+        check("混淆矩阵地址带主题与版本号（防缓存、分明暗）",
+              "v=" in artifact_url and "theme=" in artifact_url, str(artifact_url))
+        status, _ = request("GET", f"{base}/api/experiments?theme=light")
+        check("混淆矩阵支持明暗两套配色", status == 200, f"状态码 {status}")
 
         section("[11] 前端页面托管")
         status, html = request("GET", f"{base}/")
