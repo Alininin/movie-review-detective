@@ -5,7 +5,7 @@
 用法：
     python scripts/07_challenge_report.py
 
-内容（任务书 5.3）：原句、改写句、人工情感判断、两个模型的输出、预测变化是否合理。
+内容（设计文档 5.3）：原句、改写句、人工情感判断、两个模型的输出、预测变化是否合理。
 产物：
     experiments/challenge_results.csv   逐对逐模型的对比记录
     experiments/challenge_results.md    给报告直接引用的表格

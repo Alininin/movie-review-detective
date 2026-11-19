@@ -130,7 +130,7 @@ const navItems = [
     </main>
 
     <footer class="footer">
-      <span>影评侦探 · 自然语言处理与应用课程设计</span>
+      <span>影评侦探 · 本地运行的情感分析与相似检索项目</span>
       <span>数据与模型来自 Hugging Face · 本地 CPU 推理 · MIT</span>
     </footer>
   </div>

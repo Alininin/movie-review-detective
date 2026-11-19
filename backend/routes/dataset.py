@@ -1,7 +1,7 @@
 """影评资料库接口：统计、分页浏览、按标签筛选。
 
 数据全部来自 data/reviews.csv 与 data/stats.json，与离线脚本同源，
-保证「网页统计与文件一致」（任务书 3.1 验收）。
+保证「网页统计与文件一致」（设计文档 3.1 验收）。
 """
 from __future__ import annotations
 

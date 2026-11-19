@@ -1,6 +1,6 @@
 """端到端自检脚本：按 README 的启动方式跑起来后，逐项验证接口与页面是否真的能用。
 
-用途（对应任务书 六、八 的「不能只提交截图或演示视频」）：
+用途（对应设计文档 六、八 的「不能只提交截图或演示视频」）：
   * 一条命令验证全部接口、异常提示、历史增删、重启存活；
   * 检查单位与文案红线（score 不是概率、相似度不是准确率）；
   * 自检过程写进 SQLite 的历史记录会在结束时清理，不污染你的历史列表。
@@ -272,7 +272,7 @@ def main() -> int:
         status, _ = request("DELETE", f"{base}/api/history/99999999")
         check("删除不存在的记录返回 404", status == 404, f"状态码 {status}")
 
-        section("[10] 任务书之外的扩展接口")
+        section("[10] 额外做的几件事接口")
         status, explanation = request("POST", f"{base}/api/explain", {"text": sample, "top_n": 8})
         terms = (explanation or {}).get("terms", []) if isinstance(explanation, dict) else []
         check("POST /api/explain 返回 200", status == 200, f"状态码 {status}")

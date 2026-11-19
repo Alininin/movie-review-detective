@@ -6,7 +6,7 @@
     python scripts/01_build_dataset.py
     python scripts/01_build_dataset.py --pool-source from_train_1000
 
-设计要点（对应任务书 3.1）：
+设计要点（对应设计文档 3.1）：
   1. 用 Hugging Face Datasets 加载 stanfordnlp/imdb，确认 text 为影评、label=0 负面 / 1 正面。
   2. 训练集抽 1000 条（正负各 500），官方测试集抽 200 条（正负各 100）。
      抽样用固定随机种子 + 打乱候选索引后顺序扫描，**不取前若干条**。
@@ -165,7 +165,7 @@ def load_imdb():
         raise SystemExit(f"label 不是二分类 ClassLabel：{label_feature}")
     # IMDB: 0 = neg, 1 = pos；与本项目 LABEL_NAMES 一致
     if names[0] in {"neg", "negative"} and names[1] in {"pos", "positive"}:
-        mapping_note = f"{names[0]} -> 0 -> negative，{names[1]} -> 1 -> positive（与任务书一致）"
+        mapping_note = f"{names[0]} -> 0 -> negative，{names[1]} -> 1 -> positive（与设计文档一致）"
     else:
         raise SystemExit(f"标签顺序与预期不符，需人工确认：{names}")
     log.info("标签映射校验通过：%s", mapping_note)
@@ -299,7 +299,7 @@ def build(args: argparse.Namespace) -> None:
     if pool_source == "from_train_1000":
         pool_candidates = {label: [r["original_index"] for r in train_rows_out if r["label"] == label] for label in (0, 1)}
         pool_rows_source = train_rows
-        pool_desc = "从 1000 条训练样本中固定选取（与训练集重叠，任务书 5.1.1 的另一种读法）"
+        pool_desc = "从 1000 条训练样本中固定选取（与训练集重叠，设计文档 5.1.1 的另一种读法）"
     elif pool_source == "split_excluded":
         buckets = indices_by_label(train_rows)
         exclude = set(used_train)
@@ -521,7 +521,7 @@ def build(args: argparse.Namespace) -> None:
 
 
 def versions() -> dict:
-    """记录实际使用的软件版本，满足任务书「保存版本或提交号」的要求。"""
+    """记录实际使用的软件版本，满足设计文档「保存版本或提交号」的要求。"""
     result = {
         "python": sys.version.split()[0],
         "platform": platform.platform(),

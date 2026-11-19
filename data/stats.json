@@ -14,7 +14,7 @@
       "0": "negative",
       "1": "positive"
     },
-    "label_mapping_note": "neg -> 0 -> negative，pos -> 1 -> positive（与任务书一致）"
+    "label_mapping_note": "neg -> 0 -> negative，pos -> 1 -> positive（与设计文档一致）"
   },
   "versions": {
     "python": "3.12.10",

@@ -5,7 +5,7 @@
 用法：
     python scripts/04_evaluate.py
 
-评测口径（任务书 4.3）：
+评测口径（设计文档 4.3）：
   * 同一份 200 条测试集（data/reviews.csv 中 split=test）；
   * 指标：Accuracy、Macro-F1、混淆矩阵；
   * 耗时：推理总耗时与平均每条耗时，且**模型加载时间单独记录**；
@@ -127,7 +127,7 @@ def compute_metrics(y_true: list[int], y_pred: list[int]) -> dict:
 def plot_confusion(results: dict, path: Path, dark: bool = False) -> None:
     """画混淆矩阵。
 
-    dark=False 输出白底图（放进课程报告，打印与 Word 里更清楚）；
+    dark=False 输出白底图（放进项目报告，打印与 Word 里更清楚）；
     dark=True  输出深色图（给网页用，和「胶片放映厅」的界面配色一致）。
     """
     import matplotlib

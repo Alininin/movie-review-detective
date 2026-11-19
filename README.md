@@ -7,10 +7,11 @@
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> movie
-> 一个本地运行的中文网页系统：用两个模型判断英文影评的情感、用向量检索相似影评，并把实验指标、错误案例与操作历史都放进网页里。
+> 一个本地运行的影评情感分析与相似检索系统：FastAPI + Vue 3 + Hugging Face 预训练模型，纯 CPU 推理。
 
 ![影评资料库](docs/images/library.jpg)
+
+> 仓库只包含代码、数据、模型与实验材料；报告类文档（.docx / .md）不随仓库提供。
 
 ---
 
@@ -18,7 +19,7 @@
 
 - [项目做了什么](#项目做了什么)
 - [界面：液态玻璃与明暗双主题](#界面液态玻璃与明暗双主题)
-- [任务书之外的扩展](#任务书之外的扩展)
+- [额外做的几件事](#额外做的几件事)
 - [五个页面](#五个页面)
 - [环境要求](#环境要求)
 - [快速开始（三步）](#快速开始三步)
@@ -29,7 +30,6 @@
 - [环境变量与离线运行](#环境变量与离线运行)
 - [分享给别人看](#分享给别人看)
 - [实验材料在哪](#实验材料在哪)
-- [评分点与文件对照](#评分点与文件对照)
 - [常见问题](#常见问题)
 - [依赖版本](#依赖版本)
 - [说明](#说明)
@@ -103,9 +103,9 @@
 </tr>
 </table>
 
-## 任务书之外的扩展
+## 额外做的几件事
 
-任务书列的是最低要求，下面五项是在此基础上自己加的，**全部是真实计算，没有一处编造结果**：
+设计文档列的是最低要求，下面五项是在此基础上自己加的，**全部是真实计算，没有一处编造结果**：
 
 | 扩展 | 怎么做的 | 为什么不算「造假」 |
 |---|---|---|
@@ -184,7 +184,7 @@ copy .env.example .env                                          # Windows
 
 ## 两条自检命令
 
-仓库里带了两个自检脚本，用来证明「网页上的数字、材料里的数字都不是手写的」。验收或答辩前跑一遍，比截图更有说服力。
+仓库里带了两个自检脚本，用来证明「网页上的数字、材料里的数字都不是手写的」。验收或演示前跑一遍，比截图更有说服力。
 
 ```bash
 # 1) 材料一致性：不启动后端，核对 CSV / JSON / 向量 / 指标能不能互相算得出来
@@ -217,7 +217,6 @@ copy .env.example .env                                          # Windows
 | 7 | `python scripts/07_challenge_report.py` | `experiments/challenge_results.csv`、`challenge_results.md`（6 对句子在两个模型下的输出与合理性判断） | 约 5 秒 |
 | 8 | `python scripts/06_retrieval_check.py --review` 生成复核单，再人工核对 `experiments/retrieval_check.csv` 的 `relevant` 与 `reason` 两列（25 行） | `experiments/retrieval_review.md` | — |
 | 9 | `python scripts/06_retrieval_check.py --score` | `experiments/retrieval_metrics.json` | 1 秒 |
-| 10 | `python report/build_report.py`（需要 `python-docx`） | `report/课程报告.docx`、`report/课程报告.md` | 约 3 秒 |
 
 > 仓库里已经包含第 1~9 步的**全部产物**，以及人工标注完成的 `retrieval_check.csv`，
 > 因此正常验收时**不需要重跑**，直接第 3 步启动即可。重跑脚本会得到一致的划分与指标
@@ -264,11 +263,9 @@ movie-review-detective/
 ├─ models/                   传统模型文件
 ├─ experiments/              评测与实验材料
 ├─ docs/                     需求解析、页面截图
-├─ report/                   课程报告（docx + md，build_report.py 生成）
 ├─ requirements.txt
 ├─ .env.example
 ├─ .gitattributes            统一换行符；数据文件按字节保存，保证跨机器可复现
-├─ AI_USAGE.md               AI 辅助的范围、采纳与验证方式
 ├─ LICENSE                   MIT
 └─ README.md
 ```
@@ -366,7 +363,7 @@ npm run build    # 重新生成 dist，后端会自动托管新文件
 
 ### 检索库的取样口径
 
-任务书 5.1.1 要求「从训练集中固定选取 500 条作为检索库」。本项目默认使用
+设计文档 5.1.1 要求「从训练集中固定选取 500 条作为检索库」。本项目默认使用
 `split_excluded`：从 IMDB train 中**排除**已抽作训练/测试的 1200 条之后再取 500 条，
 这样检索库与训练集、测试集完全不重叠，避免「检索返回的就是训练样本」的质疑。
 若要求从 1000 条训练样本里取，用：
@@ -379,15 +376,15 @@ python scripts/01_build_dataset.py --pool-source from_train_1000
 
 ## 分享给别人看
 
-默认只监听 `127.0.0.1`，**只有本机能打开**——这是任务书要求的「本地 CPU 运行」形态。想让别人看到，有三种办法：
+默认只监听 `127.0.0.1`，**只有本机能打开**——这是设计文档要求的「本地 CPU 运行」形态。想让别人看到，有三种办法：
 
 | 方式 | 怎么做 | 适用场景 |
 |---|---|---|
-| **局域网**（推荐） | `.env` 里改 `HOST=0.0.0.0` 后启动，控制台会打印「已对局域网开放：http://192.168.x.x:8000」；同一 WiFi 下的电脑／手机直接打开这个地址 | 宿舍、实验室、答辩现场投屏 |
-| **临时公网链接** | 先按上面启动，再另开一个终端跑 `cloudflared tunnel --url http://127.0.0.1:8000`（需先装 cloudflared），它会打印一个 `https://xxx.trycloudflare.com` 链接 | 老师不在现场时远程看一眼；关掉终端链接即失效，模型仍跑在你本机 |
+| **局域网**（推荐） | `.env` 里改 `HOST=0.0.0.0` 后启动，控制台会打印「已对局域网开放：http://192.168.x.x:8000」；同一 WiFi 下的电脑／手机直接打开这个地址 | 宿舍、实验室、演示现场投屏 |
+| **临时公网链接** | 先按上面启动，再另开一个终端跑 `cloudflared tunnel --url http://127.0.0.1:8000`（需先装 cloudflared），它会打印一个 `https://xxx.trycloudflare.com` 链接 | 评审者不在现场时远程看一眼；关掉终端链接即失效，模型仍跑在你本机 |
 | **可分享链接** | 页面上的「复制可分享链接」按钮，或直接拼 URL：`#/analyze?text=…`、`#/search?q=…`、`#/challenge?pair=N1` | 把某个具体问题发给别人，让对方点开就能复现（链接只带输入，结果仍是后端实时算） |
 
-> 不建议把项目整体部署到云上：任务书要求本地运行，云上还要重新下载 3 个模型、
+> 不建议把项目整体部署到云上：设计文档要求本地运行，云上还要重新下载 3 个模型、
 > CPU 内存吃紧，反而容易在验收时翻车。临时隧道足够用，用完即关。
 
 ## 实验材料在哪
@@ -407,8 +404,6 @@ python scripts/01_build_dataset.py --pool-source from_train_1000
 | 向量构建记录 | `experiments/embedding_build.json` |
 | 6 对挑战样本（原句/改写/人工判断/两个模型输出） | `data/challenge_pairs.json`、`experiments/challenge_results.csv`、`experiments/challenge_results.md` |
 | 抽样清单与清洗记录 | `data/sampling_manifest.json`、`data/cleaning_report.json`、`data/sampling_list.csv` |
-| 课程报告 | `report/课程报告.docx`、`report/课程报告.md` |
-| AI 使用说明 | `AI_USAGE.md` |
 | 自检结果 | 运行 `scripts/09_verify_materials.py` 与 `scripts/08_smoke_test.py` 得到 |
 
 **本次实测结果**（200 条测试集，CPU，批大小 1）：
@@ -421,31 +416,6 @@ python scripts/01_build_dataset.py --pool-source from_train_1000
 两模型一致率 0.8100；都判错 8 条，意见不一致 38 条；测试集 69 条（34.5%）超过 256 token 被截断。
 检索平均 Precision@5 = 0.7200。
 
-## 评分点与文件对照
-
-| 编号 | 指标点 | 分值 | 对应文件 / 页面 |
-|---|---|---|---|
-| A1 | HF 数据加载与抽样清单 | 5 | `scripts/01_build_dataset.py`、`data/sampling_manifest.json` |
-| A2 | 清洗、固定划分及重叠检查 | 5 | `common/text_clean.py`、`data/cleaning_report.json` |
-| A3 | 数据统计正确 | 2 | `data/stats.json`（页面同源） |
-| B1 | TF-IDF + LR 训练 | 7 | `scripts/02_train_tfidf.py`、`models/tfidf_lr.joblib` |
-| B2 | 传统模型重载与预测 | 4 | `scripts/03_verify_reload.py`、`experiments/reload_check.json` |
-| B3 | HF 情感模型推理正确 | 7 | `backend/artifacts.py`（`HFSentiment`） |
-| B4 | 截断策略与模型重复使用 | 4 | 启动单例加载 + `max_length=256`，`/api/health` 可见加载耗时 |
-| C1 | 两模型 Accuracy / Macro-F1 | 5 | `scripts/04_evaluate.py`、`experiments/metrics.json`、`predictions_test.csv` |
-| C2 | 混淆矩阵及耗时比较 | 3 | `experiments/confusion_matrix.png`、`metrics.json` 中 `run_config` |
-| C3 | ≥5 条案例分析 | 4 | `experiments/error_cases.md`（7 条） |
-| D1 | 500 条向量生成、保存、加载 | 5 | `scripts/05_build_embeddings.py`、`data/embeddings.npy`、`embeddings_ids.json` |
-| D2 | 余弦排序与 Top-5 | 7 | `backend/artifacts.py` 的 `search()`、`POST /api/search` |
-| D3 | 5 条查询检查及 Precision@5 | 5 | `experiments/retrieval_check.csv`、`retrieval_metrics.json` |
-| E1 | 资料库统计、分页、筛选 | 4 | 影评资料库页 |
-| E2 | 双模型分析、分数及耗时 | 5 | 情感分析页 |
-| E3 | 检索结果、相似度及原文 | 4 | 相似影评搜索页 |
-| E4 | 挑战页面及 6 对样本 | 5 | 模型挑战页、`data/challenge_pairs.json` |
-| E5 | 实验展示及历史增删查 | 5 | 实验与历史页、`backend/db.py` |
-| E6 | CSV 批量分析及下载 | 4 | 情感分析页（示例文件 `data/sample_batch.csv`） |
-| F1 | 前后端联调及启动说明 | 7 | 本文档 + `python -m backend.main` 一条命令 + `scripts/08_smoke_test.py` 74 项自检 |
-| F2 | 依赖、脚本、报告、AI 说明 | 3 | `requirements.txt`、`frontend/package.json`、`report/`、`AI_USAGE.md`、`scripts/09_verify_materials.py` |
 
 ## 常见问题
 
@@ -474,10 +444,6 @@ A：训练集只有 1000 条，`max_features=10000` 让模型很容易过拟合�
 **Q：`data/history.db` 要不要提交？**
 A：不需要，已加入 `.gitignore`。它是运行期数据库，首次调用 `/api/predict` 会自动创建。
 
-**Q：课程报告怎么重新生成？**
-A：`.venv/Scripts/python report/build_report.py`（依赖 `python-docx`）。脚本会读 `experiments/metrics.json`
-与 `data/stats.json` 里的真实数字，同时更新 `report/课程报告.docx` 和 `report/课程报告.md`，
-正文控制在 8 页以内。改过指标后重跑它，报告里的数字就会跟着更新，不会出现「报告与材料对不上」。
 
 **Q：自检脚本报连不上服务？**
 A：`scripts/08_smoke_test.py` 默认连 `http://127.0.0.1:8000`。改过端口时用
@@ -487,7 +453,7 @@ A：`scripts/08_smoke_test.py` 默认连 `http://127.0.0.1:8000`。改过端口�
 A：图片地址由后端带上文件修改时间（`?v=…`），正常不会读到缓存。手动重画（不重新评测）用
 `.venv/Scripts/python scripts/04_evaluate.py --replot`，会同时生成白底版（报告用）和深色版（网页用）。
 
-**Q：想要一个公网链接发给老师？**
+**Q：想要一个公网链接发给评审者？**
 A：见上文「分享给别人看」。局域网最快；不在同一网络就用 cloudflared 临时隧道，
 链接关掉即失效，别把它当成正式部署。
 
@@ -501,9 +467,8 @@ A：三步，十几分钟：
 # 2) 打开 experiments/retrieval_review.md 逐条看，判断改在 experiments/retrieval_check.csv
 #    （Excel / WPS / VS Code 都行，只改 relevant 与 reason 两列，别动 sample_id、similarity）
 
-# 3) 重算 P@5，并让报告里的表格跟着更新
+# 3) 重算 P@5，结果写回 experiments/retrieval_metrics.json
 .venv/Scripts/python scripts/06_retrieval_check.py --score
-.venv/Scripts/python report/build_report.py
 ```
 
 判据：**这条影评是否在谈查询所指的那个方面**（演技 / 剧情 / 节奏 / 配乐 / 台词），
@@ -512,15 +477,15 @@ A：三步，十几分钟：
 `experiments/retrieval_top5.md` 里同 ID 的全文再判。
 
 改完如果平均 P@5 不再是 0.7200，记得同步 `README.md` 里这一行的数字，
-以及报告「局限」一节里「剧情类查询的 P@5 只有 0.40」这句（Q2 的判断若变，这句会过期）。
+以及任何引用 P@5 的文档（例如「剧情类 P@5 只有 0.40」这句，Q2 的判断若变就会过期）。
 
 **Q：主题切换记不住 / 想固定成白天？**
 A：右上角开关选择会写进 `localStorage`；想固定就直接用 `.../#/library?theme=light`。
 默认（没选过时）跟随系统的深色偏好，系统切换时会自动跟着变。
 
-**Q：界面字太少，担心老师看不出工作量？**
+**Q：界面字太少，担心评审者看不出工作量？**
 A：指标、案例、抽样规则这些内容没有删，只是收进了「＋」折叠块和「实验台」的标签页里，
-点开就是完整内容；答辩时按「实验台 → 指标 / 混淆矩阵 / 分歧样本」逐个标签演示即可。
+点开就是完整内容；演示时按「实验台 → 指标 / 混淆矩阵 / 分歧样本」逐个标签演示即可。
 
 ## 依赖版本
 
@@ -537,15 +502,13 @@ A：指标、案例、抽样规则这些内容没有删，只是收进了「＋�
 | numpy | 2.5.5 |
 | fastapi | 0.163.1 |
 | uvicorn | 0.54.0 |
-| python-docx | 1.2.0（只用于重新生成课程报告） |
 | Vue | 3.5 |
 | Vite | 6.4 |
 
 ## 说明
 
-- 本项目为个人独立完成的课程设计，数据和模型均来自 Hugging Face 公开资源，
+- 本项目为个人项目，数据和模型均来自 Hugging Face 公开资源，
   页面上所有数字都由后端实时计算或由离线脚本生成，没有任何预写结果。
-- AI 辅助的使用范围、采纳与修改情况、验证方式见 [AI_USAGE.md](AI_USAGE.md)。
 
 ## License
 

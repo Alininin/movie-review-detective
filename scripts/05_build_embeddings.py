@@ -5,7 +5,7 @@
 用法：
     python scripts/05_build_embeddings.py
 
-关键约束（任务书 5.1）：
+关键约束（设计文档 5.1）：
   * 检索库 500 条来自 data/retrieval_pool.csv，保留样本 ID；
   * 使用 all-MiniLM-L6-v2 在 CPU 上**提前**生成向量并保存；
   * 长影评按模型默认截断（max_seq_length = 256 token），本脚本统计被截断的条数；

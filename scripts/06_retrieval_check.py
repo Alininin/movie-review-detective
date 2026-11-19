@@ -9,7 +9,7 @@
     # 3) 计算 Precision@5
     python scripts/06_retrieval_check.py --score
 
-判据（任务书 5.2）：
+判据（设计文档 5.2）：
     相关性以「是否表达查询的主要观点」为依据，不能只看是否出现相同单词。
     每条查询的 Precision@5 = 前 5 条中相关结果数 / 5，再对 5 条查询取平均。
 
@@ -138,8 +138,8 @@ def review() -> None:
         "# 1) 在 experiments/retrieval_check.csv 里改 relevant 与 reason",
         "# 2) 重算 Precision@5",
         ".venv/Scripts/python scripts/06_retrieval_check.py --score",
-        "# 3) 让报告里的 P@5 表格跟着更新（报告正文那句「剧情类 P@5 只有 0.40」需要看一眼是否还对）",
-        ".venv/Scripts/python report/build_report.py",
+        "# 3) 结果写回 experiments/retrieval_metrics.json；若有文档引用了 P@5，记得同步",
+        ".venv/Scripts/python scripts/06_retrieval_check.py --score",
         "```",
         "",
         "改完数字若与 `README.md` 里的「检索平均 Precision@5 = 0.7200」不一致，记得同步那一行。",
