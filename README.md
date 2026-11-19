@@ -215,7 +215,7 @@ copy .env.example .env                                          # Windows
 | 5 | `python scripts/05_build_embeddings.py` | `data/embeddings.npy`、`embeddings_ids.json`、`experiments/embedding_build.json` | 首次约 1 分钟（下载 MiniLM） |
 | 6 | `python scripts/06_retrieval_check.py --emit` | `experiments/retrieval_results.csv`、`retrieval_check.csv`（待人工标注）、`retrieval_top5.md` | 约 5 秒 |
 | 7 | `python scripts/07_challenge_report.py` | `experiments/challenge_results.csv`、`challenge_results.md`（6 对句子在两个模型下的输出与合理性判断） | 约 5 秒 |
-| 8 | 人工填写 `experiments/retrieval_check.csv` 的 `relevant` 与 `reason` 两列（25 行） | — | — |
+| 8 | `python scripts/06_retrieval_check.py --review` 生成复核单，再人工核对 `experiments/retrieval_check.csv` 的 `relevant` 与 `reason` 两列（25 行） | `experiments/retrieval_review.md` | — |
 | 9 | `python scripts/06_retrieval_check.py --score` | `experiments/retrieval_metrics.json` | 1 秒 |
 | 10 | `python report/build_report.py`（需要 `python-docx`） | `report/课程报告.docx`、`report/课程报告.md` | 约 3 秒 |
 
@@ -400,6 +400,7 @@ python scripts/01_build_dataset.py --pool-source from_train_1000
 | 错误案例分析（7 条，人工撰写） | `experiments/error_cases.md` |
 | 错误与分歧样本清单（自动生成） | `experiments/error_cases_auto.md` |
 | 5 条查询 × Top-5 人工判断（25 条） | `experiments/retrieval_check.csv` |
+| 25 条判断的复核单（查询 + 当前判断 + 原文摘录） | `experiments/retrieval_review.md` |
 | Precision@5 计算结果 | `experiments/retrieval_metrics.json` |
 | 检索 Top-5 完整原文 | `experiments/retrieval_top5.md` |
 | 传统模型重载验证 | `experiments/reload_check.json` |
@@ -489,6 +490,29 @@ A：图片地址由后端带上文件修改时间（`?v=…`），正常不会�
 **Q：想要一个公网链接发给老师？**
 A：见上文「分享给别人看」。局域网最快；不在同一网络就用 cloudflared 临时隧道，
 链接关掉即失效，别把它当成正式部署。
+
+**Q：25 条检索相关性怎么复核？**
+A：三步，十几分钟：
+
+```bash
+# 1) 生成一页式复核单（查询原文 + 每条当前判断 + 理由 + 原文摘录 + 勾选位）
+.venv/Scripts/python scripts/06_retrieval_check.py --review
+
+# 2) 打开 experiments/retrieval_review.md 逐条看，判断改在 experiments/retrieval_check.csv
+#    （Excel / WPS / VS Code 都行，只改 relevant 与 reason 两列，别动 sample_id、similarity）
+
+# 3) 重算 P@5，并让报告里的表格跟着更新
+.venv/Scripts/python scripts/06_retrieval_check.py --score
+.venv/Scripts/python report/build_report.py
+```
+
+判据：**这条影评是否在谈查询所指的那个方面**（演技 / 剧情 / 节奏 / 配乐 / 台词），
+话题相关即算相关，情感正负都算（夸演技和骂演技都算「演技相关」）；
+不能只看有没有相同单词。摘录只是开头几十个词，长影评请打开
+`experiments/retrieval_top5.md` 里同 ID 的全文再判。
+
+改完如果平均 P@5 不再是 0.7200，记得同步 `README.md` 里这一行的数字，
+以及报告「局限」一节里「剧情类查询的 P@5 只有 0.40」这句（Q2 的判断若变，这句会过期）。
 
 **Q：主题切换记不住 / 想固定成白天？**
 A：右上角开关选择会写进 `localStorage`；想固定就直接用 `.../#/library?theme=light`。

@@ -37,6 +37,124 @@ RESULTS_CSV = config.EXPERIMENTS_DIR / "retrieval_results.csv"
 CHECK_CSV = config.EXPERIMENTS_DIR / "retrieval_check.csv"
 TOP5_MD = config.EXPERIMENTS_DIR / "retrieval_top5.md"
 METRICS_JSON = config.EXPERIMENTS_DIR / "retrieval_metrics.json"
+REVIEW_MD = config.EXPERIMENTS_DIR / "retrieval_review.md"
+EXCERPT_WORDS = 70
+
+
+def load_pool_rows() -> dict[str, dict]:
+    """按 sample_id 取回检索库原文，供复核单摘录使用。"""
+    path = config.DATA_DIR / "retrieval_pool.csv"
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8", newline="") as fh:
+        return {row["sample_id"]: row for row in csv.DictReader(fh)}
+
+
+def excerpt(text: str, words: int = EXCERPT_WORDS) -> str:
+    tokens = str(text or "").split()
+    if len(tokens) <= words:
+        return " ".join(tokens)
+    return " ".join(tokens[:words]) + " …"
+
+
+def review() -> None:
+    """把 25 条判断整理成一页复核单：查询、当前判断、理由、原文摘录、勾选位。
+
+    复核的人不需要同时开 CSV 和原文文件：一页里既能看到「现在判的是什么」，
+    也能看到「这条影评到底在说什么」，改完再回 CSV 里填即可。
+    """
+    if not CHECK_CSV.exists():
+        raise SystemExit(f"缺少 {CHECK_CSV}，请先运行 --emit 生成待标注模板")
+
+    with CHECK_CSV.open(encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    pool = load_pool_rows()
+    queries = {q["id"]: q for q in load_queries()}
+
+    grouped: dict[str, list[dict]] = {}
+    for row in rows:
+        grouped.setdefault(row["query_id"], []).append(row)
+    for items in grouped.values():
+        items.sort(key=lambda r: int(r["rank"]))
+
+    def is_relevant(value: str) -> bool:
+        return value.strip() in {"相关", "1", "yes", "true", "相关（1）"}
+
+    lines = [
+        "# 25 条检索相关性复核单",
+        "",
+        "判据：**相关性以是否表达查询的主要观点为依据，不能只看有没有相同单词**；",
+        "话题相关即算相关，情感正负都算（夸演技和骂演技都算「演技相关」）。",
+        "",
+        "怎么用：逐条读摘录（或点开对应 ID 看全文），在心里给出判断，",
+        "和「当前判断」不一致时，记下要说的话；改完 `experiments/retrieval_check.csv` 里",
+        "的 `relevant`（相关 / 不相关）与 `reason` 两列，再跑 `--score` 重算。",
+        "",
+        "## 一眼看全：当前 25 条判断",
+        "",
+        "| 查询 | 主题 | 相关 / 5 | P@5 |",
+        "|---|---|---|---|",
+    ]
+
+    summary = []
+    for query_id in sorted(grouped):
+        items = grouped[query_id]
+        hit = sum(1 for item in items if is_relevant(item["relevant"]))
+        summary.append((query_id, items[0]["topic"], hit))
+        lines.append(f"| {query_id} | {items[0]['topic']} | {hit}/5 | {hit / 5:.2f} |")
+    total = sum(hit for _, _, hit in summary)
+    lines += [
+        f"| **平均** | — | {total}/25 | {total / 25:.4f} |",
+        "",
+    ]
+
+    for query_id in sorted(grouped):
+        topic = grouped[query_id][0]["topic"]
+        query_text = queries.get(query_id, {}).get("text", "（缺少查询原文）")
+        lines += [f"## {query_id} · {topic}", "", f"> 查询：{query_text}", ""]
+
+        for item in grouped[query_id]:
+            sample_id = item["sample_id"]
+            row = pool.get(sample_id, {})
+            label = {"1": "正面", "0": "负面"}.get(str(row.get("label", "")), "未知")
+            current = "相关" if is_relevant(item["relevant"]) else "不相关"
+            lines += [
+                f"**#{item['rank']} · {sample_id} · 相似度 {float(item['similarity']):.4f} · "
+                f"数据集标签 {label} · {row.get('word_len', '?')} 词**",
+                "",
+                f"- 当前判断：**{current}**",
+                f"- 当前理由：{item.get('reason', '').strip() or '（空）'}",
+                f"- 原文摘录：{excerpt(row.get('text', ''))}",
+                f"- 复核：☐ 保持　☐ 改为相关　☐ 改为不相关　备注：________",
+                "",
+            ]
+
+    lines += [
+        "---",
+        "",
+        "## 改完之后",
+        "",
+        "```bash",
+        "# 1) 在 experiments/retrieval_check.csv 里改 relevant 与 reason",
+        "# 2) 重算 Precision@5",
+        ".venv/Scripts/python scripts/06_retrieval_check.py --score",
+        "# 3) 让报告里的 P@5 表格跟着更新（报告正文那句「剧情类 P@5 只有 0.40」需要看一眼是否还对）",
+        ".venv/Scripts/python report/build_report.py",
+        "```",
+        "",
+        "改完数字若与 `README.md` 里的「检索平均 Precision@5 = 0.7200」不一致，记得同步那一行。",
+        "",
+    ]
+
+    REVIEW_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    print(f"{'查询':<6}{'主题':<10}{'相关/5':<8}{'P@5'}")
+    for query_id, topic, hit in summary:
+        print(f"{query_id:<6}{topic:<10}{hit}/5      {hit / 5:.2f}")
+    print(f"{'平均':<16}{'':<8}{total / 25:.4f}")
+    print(f"复核单已写入 {REVIEW_MD}")
+    print("逐条勾选后，改 experiments/retrieval_check.csv 的 relevant / reason 两列，再跑 --score")
+
 
 
 def load_queries() -> list[dict]:
@@ -203,9 +321,12 @@ def main() -> None:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--emit", action="store_true", help="生成 Top-5 结果与待标注模板")
     group.add_argument("--score", action="store_true", help="读取人工标注并计算 Precision@5")
+    group.add_argument("--review", action="store_true", help="生成一页式复核单（查询 + 当前判断 + 摘录）")
     args = parser.parse_args()
     if args.emit:
         emit()
+    elif args.review:
+        review()
     else:
         score()
 
