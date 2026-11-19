@@ -639,27 +639,17 @@ html[data-theme='dark'] .theme-switch .ghost {
   color: var(--muted);
 }
 
-/* 第一块瓷砖用主色染一下，避免四块一样的方盒子显得板 */
+/* 第一块瓷砖用主色染一下，避免四块一样的方盒子显得板。
+   高光直接叠在 background 上，不占用 ::after —— 那个位置留给跟随指针的光。 */
 .tile.featured {
-  background: linear-gradient(
-    150deg,
-    color-mix(in srgb, var(--accent) 30%, transparent),
-    var(--glass) 62%
-  );
+  background:
+    radial-gradient(
+      140px 140px at 100% 0%,
+      color-mix(in srgb, var(--accent-2) 48%, transparent),
+      transparent 72%
+    ),
+    linear-gradient(150deg, color-mix(in srgb, var(--accent) 30%, transparent), var(--glass) 62%);
   border-color: color-mix(in srgb, var(--accent) 42%, transparent);
-}
-
-.tile.featured::after {
-  content: '';
-  position: absolute;
-  right: -30px;
-  top: -40px;
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent-2) 45%, transparent);
-  filter: blur(34px);
-  pointer-events: none;
 }
 
 .tile.featured .tile-value {
