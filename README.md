@@ -74,12 +74,16 @@
 没有引入 UI 框架，也没有外部字体或图标库（图标是自己画的 24×24 线性 SVG，见 `src/components/Icon.vue`），
 断网也能完整显示。
 
-下面是同一页在两种主题下的样子：
+下面是同样两个页面在两种主题下的样子：
 
 <table>
 <tr>
 <td><img src="docs/images/analyze.jpg" alt="夜间主题 · 情感分析" /></td>
 <td><img src="docs/images/light-analyze.jpg" alt="白天主题 · 情感分析" /></td>
+</tr>
+<tr>
+<td><img src="docs/images/library.jpg" alt="夜间主题 · 影评资料库" /></td>
+<td><img src="docs/images/light-library.jpg" alt="白天主题 · 影评资料库" /></td>
 </tr>
 </table>
 
